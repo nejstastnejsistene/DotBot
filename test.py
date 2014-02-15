@@ -4,6 +4,7 @@ if __name__ == '__main__':
     from dotbot import emu
     import time
     filename = 'screenshot.png'
+    '''
     while True:
         for i in range(30):
             emu.screenshot('5554:DotBot', filename)
@@ -15,3 +16,7 @@ if __name__ == '__main__':
         emu.screenshot('5554:DotBot', filename)
         emu.click(read_scores_screen(filename))
         time.sleep(1)
+    '''
+    emu.screenshot('5554:DotBot', filename)
+    info = read_game_screen(filename)
+    print partition(info.colors)

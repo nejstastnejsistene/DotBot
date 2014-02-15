@@ -5,8 +5,7 @@ __all__ = 'read_game_screen', 'read_scores_screen'
 
 
 GameScreenInfo = namedtuple('GameScreenInfo', \
-        'coords colors menu time_freeze shrinker expander')
-
+        'coords colors menu time_freeze shrinker expander') 
 
 black = 0, 0, 0
 white = 255, 255, 255
@@ -45,13 +44,17 @@ def find_powerups(img):
     y = (h + y) / 2
     return (w / 4, y), (w / 2, y), (3 * w / 4, y)
 
+def to_rgb(rgb):
+    r, g, b = rgb
+    return (r << 16) | (g << 8) | b
+
 def read_game_screen(filename):
     img = Image.open(filename)
     dots = iter_dots(img)
     x, y = dots.next()
     dist = dots.next()[1] - y
     coords = [[(x+dist*c,y+dist*r) for c in range(6)] for r in range(6)]
-    colors = [[img.getpixel(coord) for coord in row] for row in coords]
+    colors = [[to_rgb(img.getpixel(coord)) for coord in row] for row in coords]
     menu = find_menu(img)
     powerups = find_powerups(img)
     return GameScreenInfo(coords, colors, menu, *powerups)
