@@ -1,6 +1,9 @@
 from collections import namedtuple
 from PIL import Image
 
+__all__ == 'read_game_screen',
+
+
 GameScreenInfo = namedtuple('GameScreenInfo', \
         'coords colors menu time_freeze shrinker expander')
 
@@ -51,6 +54,3 @@ def read_game_screen(filename):
     menu = find_menu(img)
     powerups = find_powerups(img)
     return GameScreenInfo(coords, colors, menu, *powerups)
-
-
-print read_game_screen('images/game-screen.png')
