@@ -6,7 +6,7 @@ app = Flask(__name__)
 def twilio_endpoint():
     r = twilio.twiml.Response()
     r.message(str(request.form))
-    return r
+    return str(r)
 
 if __name__ == '__main__':
     app.run(debug=True)
