@@ -9,11 +9,13 @@ app = Flask(__name__)
 
 @app.route('/twilio', methods=['POST'])
 def twilio_endpoint():
+    import sys
+    sys.stdout = sys.stderr
     img = requests.get(request.form['MediaUrl0'])
-    with open('screenshot.png') as f:
-        f.write(img.text)
+    with open('screenshot.png', 'rw+') as f:
+        f.write(img.raw.read())
     info = read_game_screen('screenshot.png')
-    _, path = smart_path(info)
+    _, path = smart_path(info.colors)
     r = twilio.twiml.Response()
     r.message(str(path))
     return str(r)
