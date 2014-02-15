@@ -1,7 +1,7 @@
 from collections import namedtuple
 from PIL import Image
 
-__all__ == 'read_game_screen',
+__all__ = 'read_game_screen',
 
 
 GameScreenInfo = namedtuple('GameScreenInfo', \
