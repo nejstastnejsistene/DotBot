@@ -10,9 +10,9 @@ def event(type, code, value):
 def set_pos(x=None, y=None):
     assert x or y
     if x is not None:
-        event(3, 0, x)
+        event(3, 0, int(x))
     if y is not None:
-        event(3, 1, y)
+        event(3, 1, int(y))
     seperator()
 
 def finger_down():
@@ -30,4 +30,17 @@ def click(coord):
     x, y = coord
     set_pos(x, y)
     finger_down()
+    finger_up()
+
+def swipe(path, n=4):
+    set_pos(*path[0])
+    finger_down()
+    last_x, last_y = path[0]
+    for x, y in path:
+        dx = x - last_x
+        dy = y - last_y
+        for i in range(1, n+1):
+            set_pos(last_x + dx * i / float(n), last_y + dy * i / float(n))
+        last_x, last_y = x, y
+    finger_up()
     finger_up()
