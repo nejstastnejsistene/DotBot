@@ -38,8 +38,54 @@ class Dot(object):
         self.col = col
         self.color = color
         self.neighbors = set()
+    def __iter__(self):
+        yield self.row
+        yield self.col
     def __repr__(self):
         return '({}, {})'.format(self.row, self.col)
+
+class Edge(object):
+
+    def __init__(self, p1, p2):
+        self.p1 = p1
+        self.p2 = p2
+
+    def __eq__(self, other):
+        a, b = self.p1.row, self.p1.col
+        c, d = other.p2.row, other.p2.col
+        return (a, b) == (c, d) or (b, a) == (c, d)
+
+    def __hash__(self):
+        r1, c1 = self.p1.row, self.p1.col
+        r2, c2 = self.p2.row, self.p2.col
+        return (1 << (r1*6+c1)) | (1 << (r2*6+c2))
+
+    def __repr__(self):
+        return 'Edge({}, {})'.format(self.p1, self.p2)
+
+
+class PathBuildingException(Exception):
+    pass
+
+
+class Path(list):
+
+    def __init__(self, head, *tail):
+        list.__init__(self, (head,) + tail)
+        self.edges = set()
+
+    def append(self, item):
+        edge = Edge(self[-1], item)
+        if edge in self.edges:
+            raise PathBuildingException
+        self.edges.add(edge)
+        list.append(self, item)
+
+    def copy(self):
+        cpy = Path(*self)
+        cpy.edges = self.edges.copy()
+        return cpy
+
 
 def partition(colors):
     dots_grid = [[Dot(r, c, colors[r][c]) for c in range(6)] for r in range(6)]
@@ -56,8 +102,6 @@ def partition(colors):
 directions = (0, 1), (1, 0), (0, -1), (-1, 0)
 
 def _partition(dots_grid, dot, visited):
-    assert not visited[dot.row, dot.col]
-
     visited[dot.row, dot.col] = True
     acc = [dot]
     for dr, dc in directions:
@@ -80,3 +124,25 @@ def connect_partition(partition):
 def is_adjacent(x, y):
     '''Compute adjacency using the 1-norm.'''
     return abs(y.row-x.row) + abs(y.col-x.col) == 1
+
+def find_paths(colors):
+    paths = []
+    for p in partition(colors):
+        for dot in p:
+            paths += dfs(Path(dot))
+    return paths
+
+def dfs(path):
+    paths = [path]
+    for neighbor in path[-1].neighbors:
+        try:
+            new_path = path.copy()
+            new_path.append(neighbor)
+            paths += dfs(new_path)
+        except PathBuildingException:
+            continue
+    return paths
+
+def greedy_path(colors):
+    return max(find_paths(colors), key=len)
+
