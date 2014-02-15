@@ -1,7 +1,7 @@
 from collections import namedtuple
 from PIL import Image
 
-__all__ = 'read_game_screen',
+__all__ = 'read_game_screen', 'read_scores_screen'
 
 
 GameScreenInfo = namedtuple('GameScreenInfo', \
@@ -10,8 +10,9 @@ GameScreenInfo = namedtuple('GameScreenInfo', \
 
 black = 0, 0, 0
 white = 255, 255, 255
+green = None
 
-def scan_row_horizontally(img, y):
+def scan_horizontally(img, y):
     for x in range(img.size[0]):
         if img.getpixel((x, y)) not in (white, black):
             return x
@@ -20,7 +21,7 @@ def iter_dots(img):
     edge = []
     for y in range(img.size[1]):
         if img.getpixel((0, y)) in (white, black):
-            x = scan_row_horizontally(img, y) 
+            x = scan_horizontally(img, y) 
             if x is not None:
                 edge.append((x, y))
             elif edge:
@@ -54,3 +55,14 @@ def read_game_screen(filename):
     menu = find_menu(img)
     powerups = find_powerups(img)
     return GameScreenInfo(coords, colors, menu, *powerups)
+
+def read_scores_screen(filename):
+    img = Image.open(filename)
+    w, h = img.size
+    edge = []
+    for x in range(w):
+        for y in reversed(range(3 * h / 4, h)):
+            if img.getpixel((x, y)) == (65, 176, 167):
+                edge.append((x, y))
+                break
+    return edge[0][0], edge[len(edge)/2][1]

@@ -1,3 +1,4 @@
+from ai import path_to_pixels
 from commands import getoutput
 
 device = '/dev/input/event0'
@@ -43,4 +44,19 @@ def swipe(path, n=4):
             set_pos(last_x + dx * i / float(n), last_y + dy * i / float(n))
         last_x, last_y = x, y
     finger_up()
-    finger_up()
+
+def screenshot(window, filename):
+    getoutput('import -window {} {}'.format(window, filename))
+
+def play_path(info, path):
+    path = path_to_pixels(path, info.coords)
+    if isinstance(path[0], basestring):
+        if path[0] == 'time_freeze':
+            click(info.time_freeze)
+        elif path[0] == 'shrinker':
+            click(info.shrinker)
+        elif path[0] == 'expander':
+            click(info.expander)
+        click(path[1])
+    else:
+        swipe(path)
