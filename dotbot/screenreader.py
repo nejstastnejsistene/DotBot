@@ -25,7 +25,7 @@ def iter_dots(img):
                 edge.append((x, y))
             elif edge:
                 radius = len(edge) / 2
-                x, y = min(edge, key=lambda x: x[0])
+                x, y = edge[radius]
                 yield x + radius, y
                 edge = [] 
 
