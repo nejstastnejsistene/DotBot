@@ -72,6 +72,9 @@ class Path(list):
         list.__init__(self, (head,) + tail)
         self.edges = set()
 
+    def has_cycle(self):
+        return len(set(self)) != len(self)
+
     def append(self, item):
         edge = Edge(self[-1], item)
         if edge in self.edges:
@@ -89,6 +92,10 @@ def partition(colors):
     dots_grid = [[Dot(r, c, colors[r][c]) for c in range(6)] for r in range(6)]
     partitions = []
     visited = defaultdict(lambda: False)
+    for r in range(6):
+        for c in range(6):
+            if colors[r][c] is None:
+                visited[r, c] = True
     for r in range(6):
         for c in range(6):
             if not visited[r, c]:
@@ -123,17 +130,17 @@ def is_adjacent(x, y):
     '''Compute adjacency using the 1-norm.'''
     return abs(y.row-x.row) + abs(y.col-x.col) == 1
 
-def find_paths(colors):
+def find_paths(colors, use_dfs=True):
     paths = []
     for p in partition(colors):
         if len(p) > 4:
             cycle = find_cycle(p)
-            print cycle
             if cycle is not None:
                 paths.append(cycle)
                 continue
-        for dot in p:
-            paths += dfs(Path(dot))
+        if use_dfs:
+            for dot in p:
+                paths += dfs(Path(dot))
     return paths
 
 def find_cycle(partition):
@@ -170,8 +177,8 @@ def find_cycle(partition):
                     and len(neighbors[e.p1]) > 2 \
                     and len(neighbors[e.p2]) > 2:
                 interior_edges.add(e)
- 
-    # Remove interior edges.
+
+     # Remove interior edges.
     for seg in interior_edges:
         neighbors[e.p1].discard(e.p2)
         neighbors[e.p2].discard(e.p1)
@@ -185,13 +192,15 @@ def find_cycle(partition):
 
 
 def find_eularian_path(partition, neighbors, path):
-    if path[0] == path[-1] and len(set(path)) == len(partition):
+    if path[0] == path[-1] and len(path) > 1:
         return path
     for node in neighbors[path[-1]]:
         try:
             new_path = path.copy()
             new_path.append(node)
-            return find_eularian_path(partition, neighbors, new_path)
+            foo = find_eularian_path(partition, neighbors, new_path)
+            if foo is not None:
+                return foo
         except PathBuildingException:
             pass
 
@@ -209,3 +218,45 @@ def dfs(path):
 def greedy_path(colors):
     return max(find_paths(colors), key=len)
 
+def smart_path(colors, score=0, depth=2):
+    if depth < 0:
+        return score, None
+
+    max_score = 0
+    max_path = None
+
+    paths = find_paths(colors, use_dfs=False)
+    if not paths:
+        paths = find_paths(colors)
+
+    for path in paths:
+        new_colors, new_score = apply_path(colors, path, score)
+        weight, _ = smart_path(new_colors, new_score, depth - 1)
+        if weight > max_score:
+            max_score = weight
+            max_path = path
+
+    if len(max_path) == 1:
+        return max_score, ('shrinker', max_path[0])
+    else:
+        return max_score, max_path
+
+def apply_path(colors, path, score=0):
+    colors = map(list, colors) # Deep copy.
+    if path.has_cycle():
+        color = path[0].color
+        for r in range(6):
+            for c in range(6):
+                if colors[r][c] == color:
+                    shrink(colors, r, c)
+                    score += 1
+    else:
+        for node in sorted(path, key=lambda x: x.row):
+            shrink(colors, node.row, node.col)
+            score += 1
+    return colors, score
+
+def shrink(colors, row, col):
+    for r in range(row, -1, -1):
+        colors[r][col] = colors[r-1][col]
+        colors[0][col] = None

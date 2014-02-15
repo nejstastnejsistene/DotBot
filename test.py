@@ -4,15 +4,13 @@ if __name__ == '__main__':
     from dotbot import emu
     import time
     filename = 'screenshot.png'
-    while True:
-        for i in range(30):
-            emu.screenshot('5554:DotBot', filename)
-            info = read_game_screen(filename)
-            path = greedy_path(info.colors)
-            print path
-            emu.play_path(info, path)
-            time.sleep(1)
-        time.sleep(10)
+    for i in range(30):
         emu.screenshot('5554:DotBot', filename)
-        emu.click(read_scores_screen(filename))
+        info = read_game_screen(filename)
+        w, path = smart_path(info.colors)
+        print w, path
+        emu.play_path(info, path)
         time.sleep(1)
+    time.sleep(10)
+    emu.screenshot('5554:DotBot', filename)
+    emu.click(read_scores_screen(filename))
