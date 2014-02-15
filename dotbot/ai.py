@@ -51,9 +51,7 @@ class Edge(object):
         self.p2 = p2
 
     def __eq__(self, other):
-        a, b = self.p1.row, self.p1.col
-        c, d = other.p2.row, other.p2.col
-        return (a, b) == (c, d) or (b, a) == (c, d)
+        return hash(self) == hash(other)
 
     def __hash__(self):
         r1, c1 = self.p1.row, self.p1.col
@@ -96,7 +94,7 @@ def partition(colors):
             if not visited[r, c]:
                 partition = _partition(dots_grid, dots_grid[r][c], visited)
                 connect_partition(partition)
-                partitions.append(partition)
+                partitions.append(set(partition))
     return partitions
 
 directions = (0, 1), (1, 0), (0, -1), (-1, 0)
@@ -128,9 +126,74 @@ def is_adjacent(x, y):
 def find_paths(colors):
     paths = []
     for p in partition(colors):
+        if len(p) > 4:
+            cycle = find_cycle(p)
+            print cycle
+            if cycle is not None:
+                paths.append(cycle)
+                continue
         for dot in p:
             paths += dfs(Path(dot))
     return paths
+
+def find_cycle(partition):
+    partition = partition.copy()
+    neighbors = { node: node.neighbors.copy() for node in partition }
+
+    # Remove "tails" from partition.
+    endpoints = True
+    while endpoints:
+        endpoints = filter(lambda x: len(neighbors[x]) < 2, partition)
+        for endpoint in endpoints:
+            partition.remove(endpoint)
+            for neighbor in endpoint.neighbors:
+                neighbors[endpoint].discard(neighbor)
+                neighbors[neighbor].discard(endpoint)
+
+    # If it was just one long line it is now empty and has no cycle!
+    if not partition:
+        return
+
+    # Weight the edges.
+    weight_fn = lambda e: len(neighbors[e.p1]) + len(neighbors[e.p2])
+
+    # Identify interior edges.
+    interior_edges = set()
+    for node in partition:
+        weights = {}
+        for x in neighbors[node]:
+            edge = Edge(node, x)
+            weights[edge] = weight_fn(edge)
+        max_weight = max(weights.values())
+        for e, weight in weights.items():
+            if weight == max_weight \
+                    and len(neighbors[e.p1]) > 2 \
+                    and len(neighbors[e.p2]) > 2:
+                interior_edges.add(e)
+ 
+    # Remove interior edges.
+    for seg in interior_edges:
+        neighbors[e.p1].discard(e.p2)
+        neighbors[e.p2].discard(e.p1)
+ 
+    # Discard nodes without edges.
+    partition = set(filter(neighbors.__getitem__, partition))
+
+    # Find the largest path.
+    path = Path(next(iter(partition)))
+    return find_eularian_path(partition, neighbors, path)
+
+
+def find_eularian_path(partition, neighbors, path):
+    if path[0] == path[-1] and len(set(path)) == len(partition):
+        return path
+    for node in neighbors[path[-1]]:
+        try:
+            new_path = path.copy()
+            new_path.append(node)
+            return find_eularian_path(partition, neighbors, new_path)
+        except PathBuildingException:
+            pass
 
 def dfs(path):
     paths = [path]
