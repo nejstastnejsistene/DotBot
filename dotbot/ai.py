@@ -222,6 +222,8 @@ def smart_path(colors, score=0, depth=2):
     if depth < 0:
         return score, None
 
+    score *= 2
+
     max_score = 0
     max_path = None
 

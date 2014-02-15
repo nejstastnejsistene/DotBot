@@ -5,7 +5,6 @@ device = '/dev/input/event0'
 
 def event(type, code, value):
     cmd = 'sendevent {} {} {} {}'.format(device, type, code, value)
-    print cmd
     getoutput('adb shell ' + cmd)
 
 def set_pos(x=None, y=None):

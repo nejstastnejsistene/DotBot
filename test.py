@@ -13,4 +13,4 @@ if __name__ == '__main__':
         time.sleep(1)
     time.sleep(10)
     emu.screenshot('5554:DotBot', filename)
-    emu.click(read_scores_screen(filename))
+    #emu.click(read_scores_screen(filename))
