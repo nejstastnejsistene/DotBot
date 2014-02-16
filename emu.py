@@ -1,6 +1,8 @@
 import random
 from StringIO import StringIO
 
+import smart
+
 
 class DotsGrid(object):
 
@@ -29,6 +31,11 @@ class DotsGrid(object):
         
         if len(path) != len(unique_coords):
             # It formed a square, clear all dots.
+            encircled = smart.find_encircled_dots(path)
+            for dot in smart.find_encircled_dots(path):
+                row, col = dot.to_tuple()
+                if self[row, col] != self[path[0]]:
+                    self.shrink(row, col)
             self.expand(*path[0])
         else:
             # Otherwise just remove the dots in the path.
@@ -66,12 +73,22 @@ if __name__ == '__main__':
 
     grid = [4, 2, 0, 2, 1, 0, \
             3, 2, 1, 4, 4, 4, \
-            0, 3, 2, 4, 2, 0, \
-            4, 0, 3, 2, 3, 3, \
-            3, 3, 1, 4, 2, 1, \
+            3, 3, 3, 4, 2, 0, \
+            3, 0, 3, 2, 3, 3, \
+            3, 3, 3, 4, 2, 1, \
             3, 1, 4, 2, 1, 4]
+
+    loop = (2, 0), \
+           (2, 1), \
+           (2, 2), \
+           (3, 2), \
+           (4, 2), \
+           (4, 1), \
+           (4, 0), \
+           (3, 0), \
+           (2, 0)
 
     emu = DotsGrid(grid)
     print emu
-    emu.apply_path(((5, 0), (4, 0), (4, 1)))
+    emu.apply_path(loop)
     print emu
