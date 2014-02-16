@@ -16,7 +16,7 @@ if __name__ == '__main__':
                 dotbot.fakedots.totes_score = 0
                 break
 
-            print dotbot.fakedots.totes_score
-            dotbot.fakedots.totes_score = 0
+        print dotbot.fakedots.totes_score
+        dotbot.fakedots.totes_score = 0
 
  
