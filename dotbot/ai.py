@@ -31,16 +31,18 @@ def lj_algorithm(colors):
             if colors[r][c] == colors[r+1][c]:
                 return (r, c), (r+1, c)
 
+
 class Dot(object):
     def __init__(self, row, col, color):
         self.row = row
         self.col = col
         self.color = color
         self.neighbors = set()
+    def __iter__(self):
+        yield self.row
+        yield self.col
     def __repr__(self):
         return '({}, {})'.format(self.row, self.col)
-
-
 
 class Edge(object):
 
@@ -48,7 +50,7 @@ class Edge(object):
         self.p1 = p1
         self.p2 = p2
 
-    def __richcmp__(self, other):
+    def __eq__(self, other):
         return hash(self) == hash(other)
 
     def __hash__(self):
@@ -60,9 +62,9 @@ class Edge(object):
         return 'Edge({}, {})'.format(self.p1, self.p2)
 
 
-
 class PathBuildingException(Exception):
     pass
+
 
 class Path(list):
 
@@ -84,7 +86,6 @@ class Path(list):
         cpy = Path(*self)
         cpy.edges = self.edges.copy()
         return cpy
-
 
 
 def partition(colors):
