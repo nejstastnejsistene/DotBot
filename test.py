@@ -1,16 +1,17 @@
+import random
+length_of_game = 35
+
 if __name__ == '__main__':
-    from dotbot.screenreader import *
     from dotbot.ai import *
-    from dotbot import emu
-    import time
-    filename = 'screenshot.png'
-    for i in range(30):
-        emu.screenshot('5554:DotBot', filename)
-        info = read_game_screen(filename)
-        w, path = smart_path(info.colors)
-        print w, path
-        emu.play_path(info, path)
-        time.sleep(1)
-    time.sleep(10)
-    emu.screenshot('5554:DotBot', filename)
-    #emu.click(read_scores_screen(filename))
+    import dotbot.fakedots
+    colors = [[random.randrange(6) for i in range(6)] for r in range(6)]
+    #print colors
+    for i in range(length_of_game):
+        w, path = smart_path(colors) #
+        #print w, path
+        colors = dotbot.fakedots.play_path(colors, path)
+        #print "move made"
+
+    print dotbot.fakedots.totes_score
+
+ 
