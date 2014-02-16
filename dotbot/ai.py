@@ -218,11 +218,11 @@ def dfs(path):
 def greedy_path(colors):
     return max(find_paths(colors), key=len)
 
-def smart_path(colors, score=0, depth=2):
+def smart_path(colors, score=0, depth=2, weightBase=2):
     if depth < 0:
         return score, None
 
-    score *= 2
+    score *= weightBase
 
     max_score = 0
     max_path = None
