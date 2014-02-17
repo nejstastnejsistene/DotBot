@@ -1,8 +1,9 @@
 import dotbot
 
-while True:
-    board = dotbot.random_board()
-    print dotbot.draw_board(board)
-    dotbot.expand(board, 0, 0, False)
-    print dotbot.draw_board(board)
-    import time;time.sleep(1)
+board = dotbot.random_board()
+for i in range(5):
+    for j in range(36):
+        if board[j] == i:
+            print dotbot.draw_board(board)
+            dotbot.expand(board, j, False)
+            break
