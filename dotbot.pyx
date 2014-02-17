@@ -24,29 +24,32 @@ cpdef int[:] path_from_py(path):
 cpdef list path_to_py(int[:] path):
     return [(getrow(point), getcol(point)) for point in path]
 
+cpdef int[:] path_mask(int[:] path):
+    cdef int[:] matrix = array.array('i', [False]*36)
+    cdef int point
+    for point in path:
+        matrix[point] = True
+    return matrix
+
 
 cpdef int[:] random_board():
     return array.array('i', [random.randrange(5) for i in range(36)])
 
 
 cpdef shrink(int[:] board, int point, int rand=True, int exclude=-1):
-    cdef int row, col, r, x
+    cdef int row, col
     row, col = getrow(point), getcol(point)
+    return _shrink(board[col::6], row, rand, exclude)
+
+cdef _shrink(int[:] column, int row, int rand=True, int exclude=-1):
+    cdef int r, x
     for r in range(row, 0, -1):
-        board[getpoint(r, col)] = board[getpoint(r - 1, col)]
+        column[r] = column[r - 1]
     if rand:
         choices = [x for x in range(5) if x != exclude]
-        board[col] = random.choice(choices)
+        column[0] = random.choice(choices)
     else:
-        board[col] = -1
-
-
-cpdef expand(int[:] board, int point, int rand=True):
-    cdef int color, i
-    color = board[point] 
-    for i in range(36):
-        if board[i] == color:
-            shrink(board, i, rand, exclude=color)
+        column[0] = -1
 
 
 cdef ConvexHull find_convex_hull(int[:] path):
@@ -60,15 +63,18 @@ cdef ConvexHull find_convex_hull(int[:] path):
         if col > hull.c1: hull.c1 = col
     return hull
 
+cpdef int has_cycle(int[:] path):
+    cdef int[:] seen = array.array('i', [False]*36)
+    cdef int point
+    for point in path:
+        if seen[point]:
+            return True
+        seen[point] = True
+    return False
 
 cpdef int[:] get_encircled_dots(int[:] path):
     cdef ConvexHull hull = find_convex_hull(path)
-    cdef int[:] is_outside = array.array('i', [False]*36)
-
-    # Mark the path as on the outside.
-    cdef int point
-    for point in path:
-        is_outside[point] = True
+    cdef int[:] is_outside = path_mask(path)
 
     # Try to "break inside" of the path from all 4 directions.
     cdef int row, col
@@ -89,7 +95,7 @@ cpdef int[:] get_encircled_dots(int[:] path):
 
     # Put the encircled dots into an array.
     cdef int[:] encircled = array.array('i', [0]*36)
-    cdef int count = 0
+    cdef int point, count = 0
     for row in range(hull.r0 + 1, hull.r1):
         for col in range(hull.c0 + 1, hull.c1):
             point = getpoint(row, col)
@@ -97,6 +103,42 @@ cpdef int[:] get_encircled_dots(int[:] path):
                 encircled[count] = point
                 count += 1
     return encircled[:count]
+
+cpdef perm_matrix(int[:] board):
+    cdef int[:] matrix = array.array('i', [-1]*(6*64*6))
+    cdef int col, perm, index, row
+    cdef int[:] column
+    for col in range(6):
+        for perm in range(64):
+            index = (64 * col + perm) * 6
+            column = board[col::6].copy()
+            for row in range(6):
+                if perm & 1:
+                    _shrink(column, row, rand=False)
+                perm >>= 1
+            matrix[index:index+6] = column
+    return matrix
+
+cpdef inline int[:] get_perm(int[:] matrix, int col, int perm):
+    cdef index = (64 * col + perm) * 6
+    return matrix[index:index+6]
+
+cpdef apply_regular_path(int[:] matrix, int[:] path):
+    cdef int[:] mask = path_mask(path)
+    cdef int[:] perms = array.array('i', [0]*6)
+    cdef int col, row
+    for col in range(6):
+        for row in range(6):
+            if mask[getpoint(row, col)]:
+                perms[col] |= (1 << row)
+    return apply_permutation(matrix, perms)
+
+cpdef int[:] apply_permutation(int[:] matrix, int[:] perms):
+    cdef int[:] board = array.array('i', [0]*36)
+    cdef int col
+    for col in range(6):
+        board[col::6] = get_perm(matrix, col, perms[col])
+    return board
 
 
 _color_codes = 31, 32, 33, 35, 36
