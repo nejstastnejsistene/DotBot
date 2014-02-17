@@ -36,10 +36,36 @@ cpdef int[:] random_board():
     return array.array('i', [random.randrange(5) for i in range(36)])
 
 
+cpdef permutation_matrix(int[:] board):
+    cdef int[:] matrix = array.array('i', [-1]*(6*64*6))
+    cdef int col, perm, index, row
+    cdef int[:] column
+    for col in range(6):
+        for perm in range(64):
+            index = (64 * col + perm) * 6
+            column = board[col::6].copy()
+            for row in range(6):
+                if perm & 1:
+                    _shrink(column, row, rand=False)
+                perm >>= 1
+            matrix[index:index+6] = column
+    return matrix
+
+
+cpdef int[:] apply_permutation(int[:] matrix, int[:] perms):
+    cdef int[:] board = array.array('i', [0]*36)
+    cdef int col, index
+    for col in range(6):
+        index = (64 * col + perms[col]) * 6
+        board[col::6] = matrix[index:index+6]
+    return board
+
+
 cpdef shrink(int[:] board, int point, int rand=True, int exclude=-1):
     cdef int row, col
     row, col = getrow(point), getcol(point)
     return _shrink(board[col::6], row, rand, exclude)
+
 
 cdef _shrink(int[:] column, int row, int rand=True, int exclude=-1):
     cdef int r, x
@@ -50,6 +76,38 @@ cdef _shrink(int[:] column, int row, int rand=True, int exclude=-1):
         column[0] = random.choice(choices)
     else:
         column[0] = -1
+
+
+cpdef apply_path(int[:] board, int[:] matrix, int[:] path):
+    cdef int[:] perms = array.array('i', [0]*6)
+    cdef int [:] mask
+    cdef int col, row, color
+    if has_cycle(path):
+        color = board[path[0]]
+        for col in range(6):
+            for row in range(6):
+                if board[getpoint(row, col)] == color:
+                        perms[col] |= (1 << row)
+        for point in get_encircled_dots(path):
+            row, col = getrow(point), getcol(point)
+            perms[col] |= (1 << row)
+    else:
+        mask = path_mask(path)
+        for col in range(6):
+            for row in range(6):
+                if mask[getpoint(row, col)]:
+                    perms[col] |= (1 << row)
+    return apply_permutation(matrix, perms)
+
+
+cpdef int has_cycle(int[:] path):
+    cdef int[:] seen = array.array('i', [False]*36)
+    cdef int point
+    for point in path:
+        if seen[point]:
+            return True
+        seen[point] = True
+    return False
 
 
 cdef ConvexHull find_convex_hull(int[:] path):
@@ -63,14 +121,6 @@ cdef ConvexHull find_convex_hull(int[:] path):
         if col > hull.c1: hull.c1 = col
     return hull
 
-cpdef int has_cycle(int[:] path):
-    cdef int[:] seen = array.array('i', [False]*36)
-    cdef int point
-    for point in path:
-        if seen[point]:
-            return True
-        seen[point] = True
-    return False
 
 cpdef int[:] get_encircled_dots(int[:] path):
     cdef ConvexHull hull = find_convex_hull(path)
@@ -103,42 +153,6 @@ cpdef int[:] get_encircled_dots(int[:] path):
                 encircled[count] = point
                 count += 1
     return encircled[:count]
-
-cpdef perm_matrix(int[:] board):
-    cdef int[:] matrix = array.array('i', [-1]*(6*64*6))
-    cdef int col, perm, index, row
-    cdef int[:] column
-    for col in range(6):
-        for perm in range(64):
-            index = (64 * col + perm) * 6
-            column = board[col::6].copy()
-            for row in range(6):
-                if perm & 1:
-                    _shrink(column, row, rand=False)
-                perm >>= 1
-            matrix[index:index+6] = column
-    return matrix
-
-cpdef inline int[:] get_perm(int[:] matrix, int col, int perm):
-    cdef index = (64 * col + perm) * 6
-    return matrix[index:index+6]
-
-cpdef apply_regular_path(int[:] matrix, int[:] path):
-    cdef int[:] mask = path_mask(path)
-    cdef int[:] perms = array.array('i', [0]*6)
-    cdef int col, row
-    for col in range(6):
-        for row in range(6):
-            if mask[getpoint(row, col)]:
-                perms[col] |= (1 << row)
-    return apply_permutation(matrix, perms)
-
-cpdef int[:] apply_permutation(int[:] matrix, int[:] perms):
-    cdef int[:] board = array.array('i', [0]*36)
-    cdef int col
-    for col in range(6):
-        board[col::6] = get_perm(matrix, col, perms[col])
-    return board
 
 
 _color_codes = 31, 32, 33, 35, 36

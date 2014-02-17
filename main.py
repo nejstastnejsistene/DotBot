@@ -1,6 +1,14 @@
 import array
 import dotbot
 
+board = [1, 1, 1, 1, 1, 2, \
+         1, 4, 1, 4, 1, 1, \
+         1, 1, 1, 4, 1, 2, \
+         3, 3, 1, 2, 1, 0, \
+         4, 4, 1, 1, 1, 0, \
+         4, 1, 3, 4, 1, 0]
+board = array.array('i', board)
+
 path = (0, 0), \
        (0, 1), \
        (0, 2), \
@@ -23,11 +31,8 @@ dots = dotbot.get_encircled_dots(path)
 print dotbot.path_to_py(dots)
 print dotbot.has_cycle(path)
 
-board = dotbot.random_board()
 print dotbot.draw_board(board)
-m = dotbot.perm_matrix(board)
+m = dotbot.permutation_matrix(board)
 
-print dotbot.draw_board(dotbot.path_mask(path))
-
-board2 = dotbot.apply_regular_path(m, path)
+board2 = dotbot.apply_path(board, m, path)
 print dotbot.draw_board(board2)
