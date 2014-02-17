@@ -18,11 +18,11 @@ cdef inline int getpoint(int r, int c):
     return 6 * r + c
 
 
-cdef int[:] path_from_py(list path):
+cpdef int[:] path_from_py(path):
     return array.array('i', [getpoint(r, c) for r, c in path])
 
-#cdef list path_to_py(int[:] path):
-#    return [(getrow(point), getcol(point)) for point in path]
+cpdef list path_to_py(int[:] path):
+    return [(getrow(point), getcol(point)) for point in path]
 
 
 cpdef int[:] random_board():
@@ -49,11 +49,7 @@ cpdef expand(int[:] board, int point, int rand=True):
             shrink(board, i, rand, exclude=color)
 
 
-def find_convex_hull(path):
-    hull = _find_convex_hull(path_from_py(path))
-    return hull.r0, hull.c0, hull.r1, hull.c1
-
-cdef ConvexHull _find_convex_hull(int[:] path):
+cdef ConvexHull find_convex_hull(int[:] path):
     cdef ConvexHull hull = ConvexHull(5, 5, 0, 0)
     cdef int point, row, col
     for point in path:
@@ -63,6 +59,44 @@ cdef ConvexHull _find_convex_hull(int[:] path):
         if row > hull.r1: hull.r1 = row
         if col > hull.c1: hull.c1 = col
     return hull
+
+
+cpdef int[:] get_encircled_dots(int[:] path):
+    cdef ConvexHull hull = find_convex_hull(path)
+    cdef int[:] is_outside = array.array('i', [False]*36)
+
+    # Mark the path as on the outside.
+    cdef int point
+    for point in path:
+        is_outside[point] = True
+
+    # Try to "break inside" of the path from all 4 directions.
+    cdef int row, col
+    for row in range(hull.r0 + 1, hull.r1):
+        col = hull.c0
+        while not is_outside[getpoint(row, col)]:
+            is_outside[getpoint(row, col)] = True; col += 1
+        col = hull.c1
+        while not is_outside[getpoint(row, col)]:
+            is_outside[getpoint(row, col)] = True; col -= 1
+    for col in range(hull.c0 + 1, hull.c1):
+        row = hull.r0
+        while not is_outside[getpoint(row, col)]:
+            is_outside[getpoint(row, col)] = True; row += 1
+        row = hull.r1
+        while not is_outside[getpoint(row, col)]:
+            is_outside[getpoint(row, col)] = True; row -= 1
+
+    # Put the encircled dots into an array.
+    cdef int[:] encircled = array.array('i', [0]*36)
+    cdef int count = 0
+    for row in range(hull.r0 + 1, hull.r1):
+        for col in range(hull.c0 + 1, hull.c1):
+            point = getpoint(row, col)
+            if not is_outside[point]:
+                encircled[count] = point
+                count += 1
+    return encircled[:count]
 
 
 _color_codes = 31, 32, 33, 35, 36
