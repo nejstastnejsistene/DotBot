@@ -27,12 +27,12 @@ cpdef int_t[:] path_from_py(path):
 cpdef list path_to_py(int_t[:] path):
     return [(getrow(point), getcol(point)) for point in path]
 
-cpdef int_t[:] path_mask(int_t[:] path):
+cpdef int_t[:] path_mask(int_t[:] path, int_t bg=0, int_t fg=1):
     '''Create a mask representing a path.'''
-    cdef int_t[:] mask = array(type_code, [False]*36)
+    cdef int_t[:] mask = array(type_code, [bg]*36)
     cdef int_t point
     for point in path:
-        mask[point] = True
+        mask[point] = fg
     return mask
 
 

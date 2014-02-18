@@ -46,4 +46,4 @@ print dotbot.draw_board(board3)
 '''
 
 for part in dotbot.get_partitions(board):
-    print dotbot.draw_board(dotbot.path_mask(part))
+    print dotbot.draw_board(dotbot.path_mask(part, -1, board[part[0]]))
