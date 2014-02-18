@@ -9,7 +9,7 @@
 #define COL(point) (point / NUM_COLS)
 #define POINT(row, col) (NUM_COLS * col + row)
 
-#define GETCOLUMN(board, col) (board + col * NUM_ROWS)
+#define GET_COLUMN(board, col) (board + col * NUM_ROWS)
 
 typedef enum {
     EMPTY = -1,
@@ -22,21 +22,30 @@ typedef enum {
 } color_t;
 
 typedef struct {
-    int *points;
     int length;
+    int *points;
 } path_t;
 
-#define NUM_PERMUTATIONS 64 /* 2^6 */
+typedef struct {
+    int valid;
+    int score;
+    int translation[NUM_ROWS];
+} cache_entry;
 
 typedef struct {
-    int hits[NUM_COLS][NUM_PERMUTATIONS];
-    int scores[NUM_COLS][NUM_PERMUTATIONS];
-    int translations[NUM_COLS][NUM_PERMUTATIONS][NUM_ROWS];
-} cache_t;
+    int *board;
+    int score;
+} translation_t;
+
+#define NUM_PERMUTATIONS 64 /* 2^6 */
+typedef cache_entry cache_t[NUM_COLS][NUM_PERMUTATIONS];
 
 int random_dot(color_t exclude);
 int *random_board();
 int *path_mask(path_t *path, int bg, int fg);
+void get_translation(int *board, cache_t cache,
+                     int* perms, translation_t *result);
+void compute_translation(int *board, cache_t cache, int col, int perm);
 void shrink(int *board, int point);
 void shrink_column(int *column, int row);
 

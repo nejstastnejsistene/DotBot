@@ -5,6 +5,7 @@
 
 #include "DotBot.h"
 
+
 color_t random_dot(color_t exclude) {
     color_t dot = rand() % 5;
     while (dot == exclude) {
@@ -12,6 +13,7 @@ color_t random_dot(color_t exclude) {
     }
     return dot;
 }
+
 
 int *random_board() {
     int *board = malloc(sizeof(int) * NUM_DOTS);
@@ -25,6 +27,7 @@ int *random_board() {
     }
     return board;
 }
+
 
 int *path_mask(path_t *path, int bg, int fg) {
     int *mask = malloc(sizeof(int) * NUM_DOTS);
@@ -40,56 +43,66 @@ int *path_mask(path_t *path, int bg, int fg) {
     return mask;
 }
 
-void compute_translation(int *board, cache_t *cache, int col, int perm) {
 
-    /* Mark that this is present in the cache, and reset the score. */
-    cache->hits[col][perm] = 1;
-    cache->scores[col][perm] = 0;
-
-
-    /* Copy the row from the board to the cache. */
-    int *src = GETCOLUMN(board, col);
-    int *dest = cache->translations[col][perm];
-    memcpy(dest, src, sizeof(int) * NUM_ROWS);
-
-    /* Shrink dots in the cache. */
-    int row;
-    for (row = 0; row < NUM_ROWS && perm; row++) {
-        if (perm & 1) {
-            cache->scores[col][perm]++;
-            shrink_column(dest, row);        
-        }
-        perm >>= 1;
-    }
-}
-
-int *get_translation(int *board, cache_t *cache, int *perms) {
+void get_translation(int *board, cache_t cache,
+                     int *perms, translation_t *result) {
     int *new_board = malloc(sizeof(int) * NUM_DOTS);
-    if (board == NULL) {
+    if (new_board == NULL) {
         perror("malloc");
         exit(1);
     }
+
+    result->board = new_board;
+    result->score = 0;
+
     int col, perm;
     int *dest, *src;
     for (col = 0; col < NUM_COLS; col++) {
         perm = perms[col];
 
         /* Compute the translation if its not in the cache. */
-        if (!cache->hits[col][perm]) {
+        if (!cache[col][perm].valid) {
             compute_translation(board, cache, col, perm);
         }
 
         /* Copy the translated column from the cache. */
-        dest = GETCOLUMN(new_board, col);
-        src = cache->translations[col][perm];
+        dest = GET_COLUMN(new_board, col);
+        src = cache[col][perm].translation;
         memcpy(dest, src, sizeof(int) * NUM_ROWS);
+        
+        /* Update the score. */
+        result->score += cache[col][perm].score;
     }
-    return new_board;
 }
 
-void shrink(int *board, int point) {
-    shrink_column(GETCOLUMN(board, COL(point)), ROW(point));
+
+void compute_translation(int *board, cache_t cache, int col, int perm) {
+
+    /* Mark that this is present in the cache, and reset the score. */
+    cache[col][perm].valid = 1;
+    cache[col][perm].score = 0;
+
+    /* Copy the row from the board to the cache. */
+    int *src = GET_COLUMN(board, col);
+    int *dest = cache[col][perm].translation;
+    memcpy(dest, src, sizeof(int) * NUM_ROWS);
+
+    /* Shrink dots in the cache. */
+    int row, bit_field = perm;
+    for (row = 0; row < NUM_ROWS && perm; row++) {
+        if (bit_field & 1) {
+            shrink_column(dest, row);        
+            cache[col][perm].score++;
+        }
+        bit_field >>= 1;
+    }
 }
+
+
+void shrink(int *board, int point) {
+    shrink_column(GET_COLUMN(board, COL(point)), ROW(point));
+}
+
 
 void shrink_column(int *column, int row) {
     while (row > 0) {
@@ -98,6 +111,7 @@ void shrink_column(int *column, int row) {
     }
     column[0] = EMPTY;
 }
+
 
 void print_board(int *board) {
     int row, col;
@@ -116,6 +130,7 @@ void print_board(int *board) {
     printf("\n");
 }
 
+
 int main() {
     srand(time(NULL));
 
@@ -129,22 +144,26 @@ int main() {
                      POINT(3, 2), POINT(3, 1), POINT(3, 0),
                      POINT(2, 0), POINT(1, 0), POINT(0, 0) };
     path_t path;
-    path.points = points;
     path.length = 21;
+    path.points = points;
     */
+    int perms[] = { 7, 5, 61, 33, 33, 63 };
 
-    print_board(board);
-    printf("\n");
+    //print_board(board);
+    //printf("\n");
     //print_board(path_mask(&path, 0, 1));
 
     cache_t cache;
+    memset(cache, 0, sizeof(cache));
 
-    int perms[] = {2, 2, 2, 2, 2, 2};
-    int *board2 = get_translation(board, &cache, perms);
+    translation_t result;
+    get_translation(board, cache, perms, &result);
 
     print_board(board);
-    print_board(board2);
+    print_board(result.board);
+    printf("Score: %d\n", result.score);
 
     free(board);
+    free(result.board);
     return 0;
 }
