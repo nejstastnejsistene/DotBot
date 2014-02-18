@@ -22,9 +22,11 @@ cdef inline int_t getpoint(int_t row, int_t col):
 
 
 cpdef int_t[:] path_from_py(path):
+    '''Convert a list of coordinate pairs to an array of points.'''
     return array(type_code, [getpoint(r, c) for r, c in path])
 
 cpdef list path_to_py(int_t[:] path):
+    '''Convert an array of points to a list of coordinate pairs.'''
     return [(getrow(point), getcol(point)) for point in path]
 
 cpdef int_t[:] path_mask(int_t[:] path, int_t bg=0, int_t fg=1):
@@ -37,6 +39,7 @@ cpdef int_t[:] path_mask(int_t[:] path, int_t bg=0, int_t fg=1):
 
 
 cpdef int_t[:] random_board():
+    '''Create a random board.'''
     return array(type_code, [random.randrange(5) for i in range(36)])
 
 
@@ -108,6 +111,10 @@ cdef inline shrink_column(int_t[:] column, int_t row):
 
 cpdef int_t[:] apply_path(int_t[:] board, int_t[:] table,
                           int_t[:] path, int fill=False):
+    '''Apply a path to board using its permutation translation table.
+
+       Optionally, you can specify to fill the empty dots.
+    '''
     cdef int_t[:] perms = array(type_code, [0]*6)
     cdef int_t [:] mask
     cdef int_t col, row, color= -1
@@ -170,6 +177,12 @@ cdef ConvexHull get_convex_hull(int_t[:] path):
 
 
 cpdef int_t[:] get_encircled_dots(int_t[:] path):
+    '''Calculate the dots that are encircled by a cyclic path.
+
+       This works by trying to "break into" the cycle from all directions
+       while marking dots as outside. All unmarked dots are considered
+       encircled by the path.
+    '''
     cdef ConvexHull hull = get_convex_hull(path)
     cdef int_t[:] is_outside = path_mask(path)
 
@@ -203,6 +216,7 @@ cpdef int_t[:] get_encircled_dots(int_t[:] path):
 
 
 cdef fill_empty_dots(int_t[:] board, int exclude):
+    '''Fill in empty spaces randomly, optionally excluding a color.'''
     cdef int_t point
     for point in range(36):
         if board[point] == -1:
@@ -215,19 +229,21 @@ cdef fill_empty_dots(int_t[:] board, int exclude):
 
 
 cpdef list get_partitions(int_t[:] board):
+    '''Split a board into disjoint partitions of the same color.'''
     cdef int_t[:] visited = array(type_code, [False]*36)
     cdef int_t[:] partition
     cdef list partitions = []
     cdef int point
     for point in range(36):
         if not visited[point]:
-            partition = flood_fill(board, visited, point)
+            partition = _flood_fill(board, visited, point)
             if len(partition) > 0:
                 partitions.append(partition)
     return partitions
 
 
-cpdef int_t[:] flood_fill(int_t[:] board, int_t[:] visited, int_t point):
+cpdef int_t[:] _flood_fill(int_t[:] board, int_t[:] visited, int_t point):
+    '''Find a parition using a flood fill algorithm.'''
     cdef int_t[:] partition = array(type_code, [0]*36)
     cdef int_t row, col, length = 0, color = board[point]
     cdef list stack = [point]
