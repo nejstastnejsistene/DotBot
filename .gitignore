@@ -1,4 +1,5 @@
 env
 build
-*.c
-*.so
+dotbot.c
+dotbot.so
+DotBot
