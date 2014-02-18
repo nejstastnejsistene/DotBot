@@ -29,13 +29,13 @@ int *random_board() {
 }
 
 
-int *path_mask(path_t *path, int bg, int fg) {
+int *path_mask(dots_set_t *path, int bg, int fg) {
     int *mask = malloc(sizeof(int) * NUM_DOTS);
     if (mask == NULL) {
         perror("malloc");
         exit(1);
     }
-    memset(mask, bg, sizeof(mask));
+    memset(mask, bg, sizeof(int) * NUM_DOTS);
     int i;
     for (i = 0; i < path->length; i++) {
         mask[path->points[i]] = fg;
@@ -113,6 +113,76 @@ void shrink_column(int *column, int row) {
 }
 
 
+list_t *get_partitions(int *board) {    
+    int visited[NUM_DOTS] = {0};
+    dots_set_t *partition;
+    list_t *partitions = new_list();
+    int point;
+    for (point = 0; point < NUM_DOTS; point++) {
+        if (!visited[point]) {
+            partition = _fill_partition(board, visited, point);
+            if (partition->length > 0) {
+                append(partitions, partition);
+            }
+        }
+    }
+    return partitions;
+}
+
+
+dots_set_t *_fill_partition(int *board, int *visited, intptr_t point) {
+    list_t *stack = new_list();
+
+    visited[point] = 1;
+    append(stack, (void*)point);
+
+    int partition[NUM_DOTS];
+    int color = board[point];
+    int row, col, length = 0;
+    while (stack->length > 0) {
+        point = (intptr_t)pop(stack);
+        partition[length++] = point;
+
+        row = ROW(point);
+        col = COL(point);
+
+        point = POINT(row - 1, col);
+        if (row > 0 && !visited[point] && board[point] == color) {
+            visited[point] = 1;
+            append(stack, (void*)point);
+        }
+        point = POINT(row + 1, col);
+        if (row < 5 && !visited[point] && board[point] == color) {
+            visited[point] = 1;
+            append(stack, (void*)point);
+        }
+        point = POINT(row, col - 1);
+        if (col > 0 && !visited[point] && board[point] == color) { 
+            visited[point] = 1;
+            append(stack, (void*)point);
+        }
+        point = POINT(row, col + 1);
+        if (col < 5 && !visited[point] && board[point] == color) {
+            visited[point] = 1;
+            append(stack, (void*)point);
+        }
+    }
+
+    free(stack);
+
+    dots_set_t *new_partition = malloc(sizeof(dots_set_t));
+    int *points = malloc(sizeof(int) * length);
+    if (new_partition == NULL || points == NULL) {
+        perror("malloc");
+        exit(1);
+    }
+    memcpy(points, partition, sizeof(int) * length);
+    new_partition->points = points;
+    new_partition->length = length;
+    return new_partition;
+}
+
+
 void print_board(int *board) {
     int row, col;
     color_t color;
@@ -143,7 +213,7 @@ int main() {
                      POINT(5, 3), POINT(4, 3), POINT(3, 3),
                      POINT(3, 2), POINT(3, 1), POINT(3, 0),
                      POINT(2, 0), POINT(1, 0), POINT(0, 0) };
-    path_t path;
+    dots_set_t path;
     path.length = 21;
     path.points = points;
     */
@@ -162,6 +232,15 @@ int main() {
     print_board(board);
     print_board(result.board);
     printf("Score: %d\n", result.score);
+
+    list_t *list = get_partitions(board);
+    int i;
+    for (i = 0; i < list->length; i++) {
+        dots_set_t *partition = list->values[i];
+        printf("%d\n", partition->length);
+        int color = board[partition->points[0]];
+        print_board(path_mask(partition, -1, color));
+    }
 
     free(board);
     free(result.board);
