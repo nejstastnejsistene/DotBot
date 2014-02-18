@@ -30,7 +30,20 @@ path = dotbot.path_from_py(path)
 
 print dotbot.draw_board(board)
 
+'''
 m = dotbot.translation_table(board)
 board2 = dotbot.apply_path(board, m, path)
 
 print dotbot.draw_board(board2)
+
+path2 = (3, 5), (4, 5), (5, 5)
+path2 = dotbot.path_from_py(path2)
+
+m2 = dotbot.translation_table(board2)
+board3 = dotbot.apply_path(board2, m2, path2)
+
+print dotbot.draw_board(board3)
+'''
+
+for part in dotbot.get_partitions(board):
+    print dotbot.draw_board(dotbot.path_mask(part))

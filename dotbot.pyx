@@ -50,20 +50,25 @@ cpdef translation_table(int_t[:] board):
        matrix[i][j] is the result of the i'th column after shrinking the
        dots specified by the j'th permutation.
     '''
-    cdef int_t[:] matrix = array(type_code, [-1]*(6*64*6))
-    cdef int_t col, perm, row
-    cdef int_t[:] column
-    cdef int index
+    cdef int_t[:] table = array(type_code, [-1]*(6*64*6))
+    cdef int_t col, perm
     for col in range(6):
         for perm in range(64):
-            index = (64 * col + perm) * 6
-            column = board[col::6].copy()
-            for row in range(6):
-                if perm & 1:
-                    shrink_column(column, row, rand=False)
-                perm >>= 1
-            matrix[index:index+6] = column
-    return matrix
+            compute_permutation(board, table, col, perm)
+    return table
+
+
+cdef inline compute_permutation(int_t[:] board, int_t[:] table,
+                                int_t col, int perm):
+    '''Compute the permutation of a column and put it in the table.'''
+    cdef int index = (64 * col + perm) * 6
+    cdef int_t[:] column = board[col::6].copy()
+    cdef int_t row
+    for row in range(6):
+        if perm & 1:
+            shrink_column(column, row)
+        perm >>= 1
+    table[index:index+6] = column
 
 
 cpdef int_t[:] apply_permutation(int_t[:] table, int_t[:] perms):
@@ -86,32 +91,26 @@ cpdef int_t[:] apply_permutation(int_t[:] table, int_t[:] perms):
     return board
 
 
-cpdef shrink(int_t[:] board, int_t point,
-             int_t rand=True, int_t exclude=-1):
+cpdef inline shrink(int_t[:] board, int_t point):
     '''Shrink a dot in a board, in-place.'''
     cdef int_t row, col
     row, col = getrow(point), getcol(point)
-    return shrink_column(board[col::6], row, rand, exclude)
+    return shrink_column(board[col::6], row)
 
 
-cdef shrink_column(int_t[:] column, int_t row,
-                   int_t rand=True, int_t exclude=-1):
+cdef inline shrink_column(int_t[:] column, int_t row):
     '''Shrink a dot in a column, in-place.'''
     cdef int_t r, x
     for r in range(row, 0, -1):
         column[r] = column[r - 1]
-    if rand:
-        choices = [x for x in range(5) if x != exclude]
-        column[0] = random.choice(choices)
-    else:
-        column[0] = -1
+    column[0] = -1
 
 
-cpdef apply_path(int_t[:] board, int_t[:] table, int_t[:] path):
-    '''Apply a path to board, given its translation table.'''
+cpdef int_t[:] apply_path(int_t[:] board, int_t[:] table,
+                          int_t[:] path, int fill=False):
     cdef int_t[:] perms = array(type_code, [0]*6)
     cdef int_t [:] mask
-    cdef int_t col, row, color
+    cdef int_t col, row, color= -1
 
     # If there is a cycle, construct a permutation matrix for all dots
     # of the path's color, as well as any encircled dots.
@@ -133,7 +132,10 @@ cpdef apply_path(int_t[:] board, int_t[:] table, int_t[:] path):
                 if mask[getpoint(row, col)]:
                     perms[col] |= (1 << row)
 
-    return apply_permutation(table, perms)
+    cdef int_t[:] result = apply_permutation(table, perms)
+    if fill:
+        fill_empty_dots(result, exclude=color)
+    return result
 
 
 cpdef int_t has_cycle(int_t[:] path):
@@ -198,6 +200,64 @@ cpdef int_t[:] get_encircled_dots(int_t[:] path):
                 encircled[count] = point
                 count += 1
     return encircled[:count]
+
+
+cdef fill_empty_dots(int_t[:] board, int exclude):
+    cdef int_t point
+    for point in range(36):
+        if board[point] == -1:
+            if exclude == -1:
+                board[point] = random.randrange(5)
+            else:
+                choices = range(5)
+                choices.remove(exclude)
+                board[point] = random.choice(choices)
+
+
+cpdef list get_partitions(int_t[:] board):
+    cdef int_t[:] visited = array(type_code, [False]*36)
+    cdef int_t[:] partition
+    cdef list partitions = []
+    cdef int point
+    for point in range(36):
+        if not visited[point]:
+            partition = flood_fill(board, visited, point)
+            if len(partition) > 0:
+                partitions.append(partition)
+    return partitions
+
+
+cpdef int_t[:] flood_fill(int_t[:] board, int_t[:] visited, int_t point):
+    cdef int_t[:] partition = array(type_code, [0]*36)
+    cdef int_t row, col, length = 0, color = board[point]
+    cdef list stack = [point]
+
+    while stack:
+        visited[point] = True
+        partition[length] = point
+        length += 1
+
+        row, col = getrow(point), getcol(point)
+
+        point = getpoint(row - 1, col)
+        if row > 0 and not visited[point] and board[point] == color:
+            stack.append(point)
+
+        point = getpoint(row + 1, col)
+        if row < 5 and not visited[point] and board[point] == color:
+            stack.append(point)
+
+        point = getpoint(row, col - 1)
+        if col > 0 and not visited[point] and board[point] == color:
+            stack.append(point)
+
+        point = getpoint(row, col + 1)
+        if col < 5 and not visited[point] and board[point] == color:
+            stack.append(point)
+
+        point = stack.pop()
+
+    return partition[:length]
 
 
 _color_codes = 31, 32, 33, 35, 36
