@@ -45,5 +45,12 @@ board3 = dotbot.apply_path(board2, m2, path2)
 print dotbot.draw_board(board3)
 '''
 
-for part in dotbot.get_partitions(board):
-    print dotbot.draw_board(dotbot.path_mask(part, -1, board[part[0]]))
+partitions = dotbot.get_partitions(board)
+adj = dotbot.get_adjacency_matrix(partitions)
+for i in range(36):
+    for j in range(36):
+        if j < i:
+            print ' ',
+        else:
+            print adj[36*i+j],
+    print

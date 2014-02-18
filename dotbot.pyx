@@ -1,5 +1,6 @@
 from cpython.array cimport array
 
+import itertools
 import random
 from StringIO import StringIO
 
@@ -236,13 +237,14 @@ cpdef list get_partitions(int_t[:] board):
     cdef int point
     for point in range(36):
         if not visited[point]:
-            partition = _flood_fill(board, visited, point)
+            partition = _fill_partition(board, visited, point)
             if len(partition) > 0:
                 partitions.append(partition)
     return partitions
 
 
-cpdef int_t[:] _flood_fill(int_t[:] board, int_t[:] visited, int_t point):
+cpdef int_t[:] _fill_partition(int_t[:] board,
+                               int_t[:] visited, int_t point):
     '''Find a parition using a flood fill algorithm.'''
     cdef int_t[:] partition = array(type_code, [0]*36)
     cdef int_t row, col, length = 0, color = board[point]
@@ -274,6 +276,28 @@ cpdef int_t[:] _flood_fill(int_t[:] board, int_t[:] visited, int_t point):
         point = stack.pop()
 
     return partition[:length]
+
+
+cpdef int_t[:] get_adjacency_matrix(list partitions):
+    cdef int_t[:] adj = array(type_code, [False]*(36*36))
+    cdef int_t[:] partition
+    for partition in partitions:
+        update_adjacency_matrix(adj, partition)
+    return adj
+
+
+cpdef update_adjacency_matrix(int_t[:] adj, int_t[:] partition):
+    cdef int_t p1, p2
+    for p1, p2 in itertools.combinations(partition, 2):
+        if is_adjacent(p1, p2):
+            adj[36*p1+p2] = adj[36*p2+p1] = True 
+
+
+cdef inline int_t is_adjacent(int_t point0, int_t point1):
+    cdef r0, c0, r1, c1
+    r0, c0 = getrow(point0), getcol(point0)
+    r1, c1 = getrow(point1), getcol(point1)
+    return abs(r1 - r0) + abs(c1 - c0) == 1
 
 
 _color_codes = 31, 32, 33, 35, 36
