@@ -119,6 +119,11 @@ list_t *get_partitions(int *board) {
     list_t *partitions = new_list();
     int point;
     for (point = 0; point < NUM_DOTS; point++) {
+        if (board[point] == EMPTY) {
+            visited[point] = 1;
+        }
+    }
+    for (point = 0; point < NUM_DOTS; point++) {
         if (!visited[point]) {
             partition = _fill_partition(board, visited, point);
             if (partition->length > 0) {
@@ -189,7 +194,7 @@ void print_board(int *board) {
     for (row = 0; row < NUM_ROWS; row++) {
         for (col = 0; col < NUM_COLS; col++) {
             color = board[POINT(row, col)];
-            if (color == -1) {
+            if (color == EMPTY) {
                 printf("  ");
             } else {
                 printf(" \033[%dm\xe2\x97\x8f\033[0m", color_codes[color]);
@@ -233,13 +238,13 @@ int main() {
     print_board(result.board);
     printf("Score: %d\n", result.score);
 
-    list_t *list = get_partitions(board);
+    list_t *list = get_partitions(result.board);
     int i;
     for (i = 0; i < list->length; i++) {
         dots_set_t *partition = list->values[i];
         printf("%d\n", partition->length);
         int color = board[partition->points[0]];
-        print_board(path_mask(partition, -1, color));
+        print_board(path_mask(partition, EMPTY, color));
     }
 
     free(board);
