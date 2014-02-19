@@ -17,6 +17,8 @@
 #define IS_ADJACENT(a, b) \
     (ABS(ROW(b) - ROW(a)) + ABS(COL(b) - COL(a)) == 1)
 
+#define MASK(point) (1ULL << point)
+
 typedef enum {
     EMPTY = -1,
     RED,

@@ -4,6 +4,7 @@
 #include <time.h>
 
 #include "DotBot.h"
+#include "cycles.h"
 
 
 color_t random_dot(color_t exclude) {
@@ -35,7 +36,7 @@ mask_t bitmask(list_t *dots) {
     dot_node_t *dot;
     while (node != NULL) {
         dot = node->value;
-        mask |= (1L << dot->position);
+        mask |= MASK(dot->position);
         node = node->next;
     }
     return mask;
@@ -409,5 +410,23 @@ int main() {
 
     free(board);
     free(partitions);
+
+    int i;
+    for (i = 0; i < NUM_CYCLES_0; i++) {
+        print_bitmask(cycles0[i], RED, GREEN);
+    }
+    for (i = 0; i < NUM_CYCLES_1; i++) {
+        print_bitmask(cycles1[i], RED, GREEN);
+    }
+    for (i = 0; i < NUM_CYCLES_2; i++) {
+        print_bitmask(cycles2[i], RED, GREEN);
+    }
+    for (i = 0; i < NUM_CYCLES_3; i++) {
+        print_bitmask(cycles3[i], RED, GREEN);
+    }
+    for (i = 0; i < NUM_CYCLES_4; i++) {
+        print_bitmask(cycles4[i], RED, GREEN);
+    }
+
     return 0;
 }
