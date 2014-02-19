@@ -115,8 +115,7 @@ void shrink_column(int *column, int row) {
 
 list_t *get_partitions(int *board) {    
     int visited[NUM_DOTS] = {0};
-    dots_set_t *partition;
-    list_t *partitions = new_list();
+    list_t *partition, *partitions = new_list();
     int point;
     for (point = 0; point < NUM_DOTS; point++) {
         if (board[point] == EMPTY) {
@@ -125,7 +124,7 @@ list_t *get_partitions(int *board) {
     }
     for (point = 0; point < NUM_DOTS; point++) {
         if (!visited[point]) {
-            partition = _fill_partition(board, visited, point);
+            partition = build_partition(board, visited, point);
             if (partition->length > 0) {
                 append(partitions, partition);
             }
@@ -135,19 +134,28 @@ list_t *get_partitions(int *board) {
 }
 
 
-dots_set_t *_fill_partition(int *board, int *visited, int point) {
+list_t *build_partition(int *board, int *visited, int point) {
     int stack[NUM_DOTS];
     int stacklen = 0;
 
     visited[point] = 1;
     stack[stacklen++] = point;
 
-    int partition[NUM_DOTS];
+    dot_node_t *partition[NUM_DOTS];
+    dot_node_t *node;
     int color = board[point];
     int row, col, length = 0;
     while (stacklen > 0) {
         point = stack[--stacklen];
-        partition[length++] = point;
+
+        node = malloc(sizeof(dot_node_t));
+        if (node == NULL) {
+            perror("malloc");
+            exit(1);
+        }
+        node->position = point;
+        node->num_neighbors = 0;
+        partition[length++] = node;
 
         row = ROW(point);
         col = COL(point);
@@ -174,15 +182,24 @@ dots_set_t *_fill_partition(int *board, int *visited, int point) {
         }
     }
 
-    dots_set_t *new_partition = malloc(sizeof(dots_set_t));
-    int *points = malloc(sizeof(int) * length);
-    if (new_partition == NULL || points == NULL) {
-        perror("malloc");
-        exit(1);
+    /* Connect the nodes. */
+    int i, j;
+    dot_node_t *a, *b;
+    for (i = 0; i < length; i++) {
+        for (j = i; j < length; j++) {
+            a = partition[i];
+            b = partition[j];
+            if (IS_ADJACENT(a->position, b->position)) {
+                a->neighbors[a->num_neighbors++] = b;
+                b->neighbors[b->num_neighbors++] = a;
+            }
+        }
     }
-    memcpy(points, partition, sizeof(int) * length);
-    new_partition->points = points;
-    new_partition->length = length;
+
+    list_t *new_partition = new_list();
+    for (i = 0; i < length; i++) {
+        append(new_partition, partition[i]);
+    }
     return new_partition;
 }
 
@@ -238,14 +255,24 @@ int main() {
     printf("Score: %d\n", result.score);
 
     list_t *list = get_partitions(board);
-    int i;
+    int points[NUM_DOTS];
+    dots_set_t part;
+    part.points = points;
+    int i, j;
     for (i = 0; i < list->length; i++) {
-        dots_set_t *partition = list->values[i];
+        list_t *partition = list->values[i];
         printf("%d\n", partition->length);
-        int color = board[partition->points[0]];
-        print_board(path_mask(partition, EMPTY, color));
+        part.length = partition->length;
+        for (j = 0; j < part.length; j++) {
+            dot_node_t *node = partition->values[j];
+            points[j] = node->position;
+        }
+        int color = board[part.points[0]];
+        print_board(path_mask(&part, EMPTY, color));
+        free_list(partition);
     }
 
+    free_list(list);
     free(board);
     free(result.board);
     return 0;

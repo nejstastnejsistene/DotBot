@@ -13,6 +13,10 @@
 
 #define GET_COLUMN(board, col) ((board) + (col) * NUM_ROWS)
 
+#define ABS(x) (((x) < 0) ? -(x) : (x))
+#define IS_ADJACENT(a, b) \
+    (ABS(ROW(b) - ROW(a)) + ABS(COL(b) - COL(a)) == 1)
+
 typedef enum {
     EMPTY = -1,
     RED,
@@ -39,6 +43,13 @@ typedef struct {
     int score;
 } translation_t;
 
+struct dot_node {
+    int position;
+    struct dot_node *neighbors[4];
+    int num_neighbors;
+};
+typedef struct dot_node dot_node_t;
+
 #define NUM_PERMUTATIONS 64 /* 2^6 */
 typedef cache_entry cache_t[NUM_COLS][NUM_PERMUTATIONS];
 
@@ -51,7 +62,7 @@ void compute_translation(int *board, cache_t cache, int col, int perm);
 void shrink(int *board, int point);
 void shrink_column(int *column, int row);
 list_t *get_partitions(int *board);
-dots_set_t *_fill_partition(int *board, int *visited, int point);
+list_t *build_partition(int *board, int *visited, int point);
 
 /* ANSI color codes for drawing the dots. */
 int color_codes[5] = { 31, 32, 33, 35, 36 };
