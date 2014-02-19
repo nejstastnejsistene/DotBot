@@ -29,23 +29,21 @@ int *random_board() {
 }
 
 
-int *path_mask(dots_set_t *path, int bg, int fg) {
-    int *mask = malloc(sizeof(int) * NUM_DOTS);
-    if (mask == NULL) {
-        perror("malloc");
-        exit(1);
-    }
-    memset(mask, bg, sizeof(int) * NUM_DOTS);
-    int i;
-    for (i = 0; i < path->length; i++) {
-        mask[path->points[i]] = fg;
+mask_t bitmask(list_t *dots) {
+    mask_t mask = 0;
+    list_node_t *node = dots->head;
+    dot_node_t *dot;
+    while (node != NULL) {
+        dot = node->value;
+        mask |= (1L << dot->position);
+        node = node->next;
     }
     return mask;
 }
 
 
 void get_translation(int *board, cache_t cache,
-                     int *perms, translation_t *result) {
+                     mask_t mask, translation_t *result) {
     int *new_board = malloc(sizeof(int) * NUM_DOTS);
     if (new_board == NULL) {
         perror("malloc");
@@ -55,46 +53,48 @@ void get_translation(int *board, cache_t cache,
     result->board = new_board;
     result->score = 0;
 
-    int col, perm;
+    int col, col_mask;
     int *dest, *src;
     for (col = 0; col < NUM_COLS; col++) {
-        perm = perms[col];
+        col_mask = mask & COL_MASK;
 
         /* Compute the translation if its not in the cache. */
-        if (!cache[col][perm].valid) {
-            compute_translation(board, cache, col, perm);
+        if (!cache[col][col_mask].valid) {
+            compute_translation(board, cache, col, col_mask);
         }
 
         /* Copy the translated column from the cache. */
         dest = GET_COLUMN(new_board, col);
-        src = cache[col][perm].translation;
+        src = cache[col][col_mask].translation;
         memcpy(dest, src, sizeof(int) * NUM_ROWS);
         
         /* Update the score. */
-        result->score += cache[col][perm].score;
+        result->score += cache[col][col_mask].score;
+
+        mask >>= NUM_COLS;
     }
 }
 
 
-void compute_translation(int *board, cache_t cache, int col, int perm) {
+void compute_translation(int *board, cache_t cache, int col, int col_mask) {
 
     /* Mark that this is present in the cache, and reset the score. */
-    cache[col][perm].valid = 1;
-    cache[col][perm].score = 0;
+    cache[col][col_mask].valid = 1;
+    cache[col][col_mask].score = 0;
 
     /* Copy the row from the board to the cache. */
     int *src = GET_COLUMN(board, col);
-    int *dest = cache[col][perm].translation;
+    int *dest = cache[col][col_mask].translation;
     memcpy(dest, src, sizeof(int) * NUM_ROWS);
 
     /* Shrink dots in the cache. */
-    int row, bit_field = perm;
-    for (row = 0; row < NUM_ROWS && perm; row++) {
-        if (bit_field & 1) {
+    int row, bitfield = col_mask;
+    for (row = 0; row < NUM_ROWS && bitfield; row++) {
+        if (bitfield & 1) {
             shrink_column(dest, row);        
-            cache[col][perm].score++;
+            cache[col][col_mask].score++;
         }
-        bit_field >>= 1;
+        bitfield >>= 1;
     }
 }
 
@@ -151,6 +151,7 @@ list_t *build_partition(int *board, int *visited, int point) {
             exit(1);
         }
         node->position = point;
+        node->color = board[point];
         node->num_neighbors = 0;
         partition[length++] = node;
 
@@ -220,6 +221,7 @@ void *find_cycle(list_t *original_partition) {
 
     list_node_t *node = original_partition->head;
     dot_node_t *prev_dot, *dot = NULL;
+
     /* A lookup table of previous nodes so we can remove nodes
      * in constant time.
      */
@@ -325,14 +327,32 @@ void *find_cycle(list_t *original_partition) {
     /* If removing those dots caused the size of the partition to go less
      * than four, there can't be a cycle in there.
      */
+    printf("=================\n");
     if (partition.length < 4) {
-        printf("No cycles here!;");
-        return NULL;
+        printf("No cycles here!\n");
     }
 
+    color_t color = ((dot_node_t*)partition.head->value)->color;
+
+    printf("Old length: %d\n", original_partition->length);
+    mask_t mask = bitmask(original_partition);
+    print_bitmask(mask, EMPTY, color);
+
     printf("New length: %d\n", partition.length);
+    mask = bitmask(&partition);
+    print_bitmask(mask, EMPTY, color);
 
     return NULL;
+}
+
+
+void free_partition(list_t *partition) {
+    list_node_t *node = partition->head;
+    while (node != NULL) {
+        free(node->value);
+        node = node->next;
+    }
+    free(partition);
 }
 
 
@@ -354,6 +374,15 @@ void print_board(int *board) {
 }
 
 
+void print_bitmask(mask_t mask, int bg, int fg) {
+    int board[NUM_DOTS];
+    int i;
+    for (i = 0; i < NUM_DOTS; i++, mask >>= 1) {
+        board[i] = (mask & 1) ? fg : bg;
+    }
+    print_board(board);
+}
+
 int main() {
     srand(time(NULL));
 
@@ -366,67 +395,19 @@ int main() {
     board[12] = 0;
     board[13] = 0;
     board[14] = 0;
-    /*
-    int points[] = { POINT(0, 0), POINT(0, 1), POINT(0, 2),
-                     POINT(0, 3), POINT(0, 4), POINT(0, 5),
-                     POINT(1, 5), POINT(2, 5), POINT(3, 5),
-                     POINT(4, 5), POINT(5, 5), POINT(5, 4),
-                     POINT(5, 3), POINT(4, 3), POINT(3, 3),
-                     POINT(3, 2), POINT(3, 1), POINT(3, 0),
-                     POINT(2, 0), POINT(1, 0), POINT(0, 0) };
-    dots_set_t path;
-    path.length = 21;
-    path.points = points;
-    */
-    int perms[] = { 7, 5, 61, 33, 33, 63 };
-
-    //print_board(board);
-    //printf("\n");
-    //print_board(path_mask(&path, 0, 1));
-
-    cache_t cache;
-    memset(cache, 0, sizeof(cache));
-
-    translation_t result;
-    get_translation(board, cache, perms, &result);
 
     print_board(board);
-    print_board(result.board);
-    printf("Score: %d\n", result.score);
 
-    list_t *list = get_partitions(board);
-    list_node_t *node1, *node2;
-    int points[NUM_DOTS];
-    dots_set_t part;
-    part.points = points;
-    node1 = list->head;
-    while (node1 != NULL) {
-        list_t *partition = node1->value;
-        if (partition->length >= 4) {
-            printf("Old length: %d\n", partition->length);
-            find_cycle(partition);
-        }
-        part.length = partition->length;
-        int j = 0;
-        node2 = partition->head;
-        while (node2 != NULL) {
-            dot_node_t *node = node2->value;
-            points[j++] = node->position;
-            free(node);
-            free(node2);
-            node2 = node2->next;
-        }
-        if (partition->length >= 4) {
-            int color = board[part.points[0]];
-            print_board(path_mask(&part, EMPTY, color));
-        }
-        free(partition);
-        free(node1);
-        node1 = node1->next;
+    list_t *partitions = get_partitions(board);
+    list_node_t *node = partitions->head;
+    while (node != NULL) {
+        list_t *partition = node->value;
+        find_cycle(partition);
+        free_partition(partition);
+        node = node->next;
     }
 
-    free(list);
     free(board);
-    free(result.board);
+    free(partitions);
     return 0;
 }
