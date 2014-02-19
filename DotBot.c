@@ -135,17 +135,18 @@ list_t *get_partitions(int *board) {
 }
 
 
-dots_set_t *_fill_partition(int *board, int *visited, intptr_t point) {
-    list_t *stack = new_list();
+dots_set_t *_fill_partition(int *board, int *visited, int point) {
+    int stack[NUM_DOTS];
+    int stacklen = 0;
 
     visited[point] = 1;
-    append(stack, (void*)point);
+    stack[stacklen++] = point;
 
     int partition[NUM_DOTS];
     int color = board[point];
     int row, col, length = 0;
-    while (stack->length > 0) {
-        point = (intptr_t)pop(stack);
+    while (stacklen > 0) {
+        point = stack[--stacklen];
         partition[length++] = point;
 
         row = ROW(point);
@@ -154,26 +155,24 @@ dots_set_t *_fill_partition(int *board, int *visited, intptr_t point) {
         point = POINT(row - 1, col);
         if (row > 0 && !visited[point] && board[point] == color) {
             visited[point] = 1;
-            append(stack, (void*)point);
+            stack[stacklen++] = point;
         }
         point = POINT(row + 1, col);
         if (row < 5 && !visited[point] && board[point] == color) {
             visited[point] = 1;
-            append(stack, (void*)point);
+            stack[stacklen++] = point;
         }
         point = POINT(row, col - 1);
         if (col > 0 && !visited[point] && board[point] == color) { 
             visited[point] = 1;
-            append(stack, (void*)point);
+            stack[stacklen++] = point;
         }
         point = POINT(row, col + 1);
         if (col < 5 && !visited[point] && board[point] == color) {
             visited[point] = 1;
-            append(stack, (void*)point);
+            stack[stacklen++] = point;
         }
     }
-
-    free(stack);
 
     dots_set_t *new_partition = malloc(sizeof(dots_set_t));
     int *points = malloc(sizeof(int) * length);
@@ -238,7 +237,7 @@ int main() {
     print_board(result.board);
     printf("Score: %d\n", result.score);
 
-    list_t *list = get_partitions(result.board);
+    list_t *list = get_partitions(board);
     int i;
     for (i = 0; i < list->length; i++) {
         dots_set_t *partition = list->values[i];

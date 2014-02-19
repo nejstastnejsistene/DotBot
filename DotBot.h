@@ -1,7 +1,6 @@
 #ifndef DOTBOT_H
 #define DOTBOT_H
 
-#include <inttypes.h>
 #include "list.h"
 
 /* Macros for dealing with column major arrays of dots. */
@@ -52,7 +51,7 @@ void compute_translation(int *board, cache_t cache, int col, int perm);
 void shrink(int *board, int point);
 void shrink_column(int *column, int row);
 list_t *get_partitions(int *board);
-dots_set_t *_fill_partition(int *board, int *visited, intptr_t point);
+dots_set_t *_fill_partition(int *board, int *visited, int point);
 
 /* ANSI color codes for drawing the dots. */
 int color_codes[5] = { 31, 32, 33, 35, 36 };
