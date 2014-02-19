@@ -2,6 +2,8 @@
 
 #include "DotBot.h"
 
+#define HAS_CYCLE(cycle, mask) ((cycle) & (mask) == (cycle))
+
 #define NUM_CYCLES_0 25
 #define NUM_CYCLES_1 16
 #define NUM_CYCLES_2 18
