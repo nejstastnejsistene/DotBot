@@ -115,7 +115,7 @@ void shrink_column(int *column, int row) {
 
 list_t *get_partitions(int *board) {    
     int visited[NUM_DOTS] = {0};
-    list_t *partition, *partitions = new_list();
+    list_t *partitions = new_list();
     int point;
     for (point = 0; point < NUM_DOTS; point++) {
         if (board[point] == EMPTY) {
@@ -124,10 +124,7 @@ list_t *get_partitions(int *board) {
     }
     for (point = 0; point < NUM_DOTS; point++) {
         if (!visited[point]) {
-            partition = build_partition(board, visited, point);
-            if (partition->length > 0) {
-                append(partitions, partition);
-            }
+            push(partitions, build_partition(board, visited, point));
         }
     }
     return partitions;
@@ -198,9 +195,144 @@ list_t *build_partition(int *board, int *visited, int point) {
 
     list_t *new_partition = new_list();
     for (i = 0; i < length; i++) {
-        append(new_partition, partition[i]);
+        push(new_partition, partition[i]);
     }
     return new_partition;
+}
+
+
+void *find_cycle(list_t *original_partition) {
+    if (original_partition->length < 4) {
+        return NULL;
+    }
+
+    /* Create a copy of the partition so we can modify it.
+     * `partition` is a shallow copy so we can remove nodes
+     * from the partition, and `neighbors` and `num_neighbors`
+     * are copies of the lists of neighbors from the original
+     * partition so that we can remove dots from the graph
+     * without affecting the original partition.
+     */
+    list_t partition;
+    init_list(&partition);
+    dot_node_t *neighbors[NUM_DOTS][4];
+    int num_neighbors[NUM_DOTS];
+
+    list_node_t *node = original_partition->head;
+    dot_node_t *prev_dot, *dot = NULL;
+    /* A lookup table of previous nodes so we can remove nodes
+     * in constant time.
+     */
+    list_node_t *prev_node_lookup[NUM_DOTS] = {NULL};
+
+    int i, j;
+    for (i = 0; i < original_partition->length; i++) {
+        prev_dot = dot;
+        dot = node->value;
+
+        /* Copy the neighbors stuff into the local copy. */
+        for (j = 0; j < dot->num_neighbors; j++) {
+            neighbors[dot->position][j] = dot->neighbors[j];
+        }
+        num_neighbors[dot->position] = dot->num_neighbors;
+
+        /* Push each dot onto the local partition list. */
+        push(&partition, dot);
+
+        /* Record the node preceding each dot. */
+        if (prev_dot != NULL) {
+            prev_node_lookup[prev_dot->position] = partition.head;
+        }
+
+        node = node->next;
+    }
+
+    /* Repeatedly remove all nodes whose degree is less than two.
+     * If there are any nodes remaining after this, there is guaranteed
+     * to be a cycle in it somewhere.
+     */
+    int visited[NUM_DOTS] = {0};
+    dot_node_t *stack[NUM_DOTS];
+    int stacklen = 0;
+
+    /* Add all nodes of degree one to the stack. */
+    node = partition.head;
+    while (node != NULL) {
+        dot = node->value;
+        if (num_neighbors[dot->position] < 2) {
+            visited[dot->position] = 1;
+            stack[stacklen++] = dot;
+        }
+        node = node->next;
+    }
+
+    /* Remove each node in the stack from the partition. Also
+     * add the nodes neighbors if removing the node causes the
+     * neighbor to have a degree less than two.
+     */
+    dot_node_t *neighbor;
+    int point, k;
+    while (partition.length >= 4 && stacklen > 0) {
+        dot = stack[--stacklen];
+        
+        /* Remove this dot from all of all of its neighbors' neighbors. */
+        for (i = 0; i < num_neighbors[dot->position]; i++) {
+            neighbor = neighbors[dot->position][i];
+            point = neighbor->position;
+            if (!visited[point]) {
+                for (j = 0; j < num_neighbors[point]; j++) {
+                    if (neighbors[point][j] == dot) {
+                        for (k = j; k < num_neighbors[point]; k++) {
+                            neighbors[point][k] = neighbors[point][k + 1];
+                        }
+                        num_neighbors[point]--;
+                        break;
+                    }
+                }
+            }
+
+            /* If this leaves the current dot with less than 2 neighbors,
+             * add it to the stack as well. Use `visited` to determine
+             * if a dot has been in the stack yet or not.
+             */
+            if (num_neighbors[point] == 1 && !visited[point]) {
+                visited[point] = 1;
+                stack[stacklen++] = neighbor;
+            }
+        }
+
+        /* Remove this dot from the partition. */
+        list_node_t *tmp, *prev = prev_node_lookup[dot->position];
+
+        if (prev == NULL) {
+            /* The dot is stored in the head of the list. We just 
+             * reassign the head.
+             */
+            tmp = partition.head;
+            partition.head = tmp->next;
+            free(tmp);
+        } else {
+            /* Otherwise we have a reference to the node prior to the item
+             * we are trying to remove. Simply reconnect the pointers.
+             */
+            tmp = prev->next;
+            prev->next = tmp->next;
+            free(tmp);
+        }
+        partition.length--;
+    }
+
+    /* If removing those dots caused the size of the partition to go less
+     * than four, there can't be a cycle in there.
+     */
+    if (partition.length < 4) {
+        printf("No cycles here!;");
+        return NULL;
+    }
+
+    printf("New length: %d\n", partition.length);
+
+    return NULL;
 }
 
 
@@ -226,6 +358,14 @@ int main() {
     srand(time(NULL));
 
     int *board = random_board();
+    board[0] = 0;
+    board[1] = 0;
+    board[2] = 0;
+    board[6] = 0;
+    board[8] = 0;
+    board[12] = 0;
+    board[13] = 0;
+    board[14] = 0;
     /*
     int points[] = { POINT(0, 0), POINT(0, 1), POINT(0, 2),
                      POINT(0, 3), POINT(0, 4), POINT(0, 5),
@@ -255,24 +395,37 @@ int main() {
     printf("Score: %d\n", result.score);
 
     list_t *list = get_partitions(board);
+    list_node_t *node1, *node2;
     int points[NUM_DOTS];
     dots_set_t part;
     part.points = points;
-    int i, j;
-    for (i = 0; i < list->length; i++) {
-        list_t *partition = list->values[i];
-        printf("%d\n", partition->length);
-        part.length = partition->length;
-        for (j = 0; j < part.length; j++) {
-            dot_node_t *node = partition->values[j];
-            points[j] = node->position;
+    node1 = list->head;
+    while (node1 != NULL) {
+        list_t *partition = node1->value;
+        if (partition->length >= 4) {
+            printf("Old length: %d\n", partition->length);
+            find_cycle(partition);
         }
-        int color = board[part.points[0]];
-        print_board(path_mask(&part, EMPTY, color));
-        free_list(partition);
+        part.length = partition->length;
+        int j = 0;
+        node2 = partition->head;
+        while (node2 != NULL) {
+            dot_node_t *node = node2->value;
+            points[j++] = node->position;
+            free(node);
+            free(node2);
+            node2 = node2->next;
+        }
+        if (partition->length >= 4) {
+            int color = board[part.points[0]];
+            print_board(path_mask(&part, EMPTY, color));
+        }
+        free(partition);
+        free(node1);
+        node1 = node1->next;
     }
 
-    free_list(list);
+    free(list);
     free(board);
     free(result.board);
     return 0;

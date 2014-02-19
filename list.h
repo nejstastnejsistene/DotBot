@@ -1,17 +1,19 @@
 #ifndef LIST_H
 #define LIST_H
 
-#define INITIAL_BUFSIZE 64
+typedef struct _list_node {
+    void *value;
+    struct _list_node *next;
+} list_node_t;
 
 typedef struct {
-    void **values;
-    int bufsize;
+    list_node_t *head;
     int length;
 } list_t;
 
 list_t *new_list();
-void free_list(list_t *list);
-void append(list_t *list, void *value);
+void init_list(list_t *list);
+void push(list_t *list, void *value);
 void *pop(list_t *list);
 
 #endif // LIST_H
