@@ -3,4 +3,4 @@ build
 dotbot.c
 dotbot.so
 DotBot
-bitmaps
+find_cycles

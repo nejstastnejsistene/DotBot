@@ -11,7 +11,7 @@
 #include <limits.h>   /* defines CHAR_BIT */
 
 /* Type SET is used to represent sets. */
-typedef unsigned int SET;
+typedef unsigned long long SET;
 
 /* SET_BITS: Maximum bits per set. */
 #define SET_BITS             (sizeof(SET)*CHAR_BIT)
@@ -20,13 +20,13 @@ typedef unsigned int SET;
 #define check(i)             (((unsigned) (i)) < SET_BITS)
 
 /* emptyset: A set with no elements. */
-#define emptyset             ((SET) 0)
+#define emptyset             ((SET) 0ULL)
 
 /* add(s,i): Add a single integer to a set. */
 #define add(set,i)           ((set) | singleset (i))
 
 /* singleset(i): Return a set with one element in it. */
-#define singleset(i)         (((SET) 1) << (i))
+#define singleset(i)         (((SET) 1ULL) << (i))
 
 /* intersect: Return intersection of two sets. */
 #define intersect(set1,set2) ((set1) & (set2))
@@ -54,7 +54,7 @@ typedef unsigned int SET;
 /* first_set_of_n_elements(n): Produce a set of size n whose
    elements are the integers from 0 through n-1.  This
    exploits the properties of unsigned subtractions. */
-#define first_set_of_n_elements(n)  (SET)((1<<(n))-1) 
+#define first_set_of_n_elements(n)  (SET)((1ULL<<(n))-1) 
 
 /* next_set_of_n_elements(s): Given a set of n elements,
    produce a new set of n elements.  If you start with the

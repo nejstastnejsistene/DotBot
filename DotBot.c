@@ -341,12 +341,13 @@ void *find_cycle(list_t *original_partition) {
 
     printf("New length: %d\n", partition.length);
     mask = bitmask(&partition);
+    /*
     for (i = 0; i < NUM_CYCLES_1; i++) {
         if (HAS_CYCLE(cycles1[i], mask)) {
             printf("Found cycle at cycles1[%d]\n", i);
             print_bitmask(mask, EMPTY, color);
         }
-    }
+    }*/
 
     return NULL;
 }
@@ -415,5 +416,15 @@ int main() {
 
     free(board);
     free(partitions);
+
+    int i, j, k;
+    for (i = 0; i < NUM_PERIMETERS; i++) {
+        for (j = 0; j < CYCLES_DIM_2 && cycles[i][j]; j++) {
+            for (k = 0; k < CYCLES_DIM_3 && cycles[i][j][k]; k++) {
+                print_bitmask(cycles[i][j][k], EMPTY, RED);
+            }
+        }  
+    }
+
     return 0;
 }
