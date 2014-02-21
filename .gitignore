@@ -1,6 +1,3 @@
 env
-build
-dotbot.c
-dotbot.so
 DotBot
 find_cycles

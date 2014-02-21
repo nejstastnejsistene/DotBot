@@ -1,7 +1,6 @@
 #ifndef DOTBOT_H
 #define DOTBOT_H
 
-#include "list.h"
 #include "set.h"
 
 /* Macros for dealing with column major arrays of dots. */
