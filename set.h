@@ -1,3 +1,5 @@
+#ifndef SET_H
+#define SET_H
 /* 
  * set.h  from the Set of Integers example, 
  * Ch. 7, C: A Reference Manual 5/e
@@ -80,3 +82,5 @@ extern int cardinality(SET x);
    of such sets; it should equal n!/(k!(n-k)!) 
    where n! = 1*2*...*n. */
 extern void print_k_of_n(int k, int n);
+
+#endif // SET_H

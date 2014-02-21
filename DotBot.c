@@ -313,19 +313,18 @@ void print_adjacency_matrix(adjacency_t *adj) {
 }
 
 
-void depth_first_search(
+void depth_first_search(vector_t *vector,
         adjacency_t *adj, SET partition, SET path, int point, color_t color) {
     partition = remove(partition, point);
     path = add(path, point);
     if (cardinality(path) > 1) {
-        printf("-------------\n");
-        print_bitmask(path, EMPTY, color);
+        vector_append(vector, path);
     }
     int i, neighbor;
     for (i = 0; i < adj->degree[point]; i++) {
         neighbor = adj->neighbors[point][i];
         if (element(neighbor, partition)) {
-            depth_first_search(adj, partition, path, neighbor, color);
+            depth_first_search(vector, adj, partition, path, neighbor, color);
         }
     }
 }
@@ -344,6 +343,8 @@ int main() {
     adjacency_t adj;
     memset(&adj, 0, sizeof(adj));
 
+    vector_t *vector = vector_new();
+
     color_t color;
     int point;
     for (color = 0; color < NUM_COLORS; color++) {
@@ -351,10 +352,17 @@ int main() {
         get_adjacency_matrix(mask, &adj);
         for (point = 0; point < NUM_DOTS; point++) {
             if (adj.degree[point] == 1) {
-                depth_first_search(&adj, mask, emptyset, point, color);
+                depth_first_search(vector, &adj, mask, emptyset, point, color);
             }
         }
     }
+
+    int i;
+    for (i = 0; i < vector->length; i++) {
+        print_bitmask(vector->items[i], GREEN, RED);
+    }
+
+    vector_free(vector);
 
     return 0;
 }

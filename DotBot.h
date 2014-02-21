@@ -2,6 +2,7 @@
 #define DOTBOT_H
 
 #include "set.h"
+#include "vector.h"
 
 /* Macros for dealing with column major arrays of dots. */
 #define NUM_ROWS 6
