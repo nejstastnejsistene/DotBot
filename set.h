@@ -26,7 +26,7 @@ typedef unsigned long long SET;
 #define add(set,i)           ((set) | singleset (i))
 
 /* remove(s,i): Remove a single integer from the set. */
-#define remove(i,x) (setdiff(x, singleset(i)))
+#define remove(set, i)       ((set) & ~singleset (i))
 
 /* singleset(i): Return a set with one element in it. */
 #define singleset(i)         (((SET) 1ULL) << (i))

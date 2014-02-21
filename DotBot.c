@@ -130,7 +130,7 @@ SET build_partition(SET *mask, int point) {
     int stacklen = 0;
 
     /* Push `point` onto the stack. */
-    *mask = remove(point, *mask);
+    *mask = remove(*mask, point);
     stack[stacklen++] = point;
 
     int row, col;
@@ -147,27 +147,44 @@ SET build_partition(SET *mask, int point) {
          */
         point = POINT(row - 1, col);
         if (row > 0 && element(point, *mask)) {
-            *mask = remove(point, *mask);
+            *mask = remove(*mask, point);
             stack[stacklen++] = point;
         }
         point = POINT(row + 1, col);
         if (row < NUM_ROWS && element(point, *mask)) {
-            *mask = remove(point, *mask);
+            *mask = remove(*mask, point);
             stack[stacklen++] = point;
         }
         point = POINT(row, col - 1);
         if (col > 0 && element(point, *mask)) {
-            *mask = remove(point, *mask);
+            *mask = remove(*mask, point);
             stack[stacklen++] = point;
         }
         point = POINT(row, col + 1);
         if (col < NUM_COLS && element(point, *mask)) {
-            *mask = remove(point, *mask);
+            *mask = remove(*mask, point);
             stack[stacklen++] = point;
         }
     }
 
     return partition;
+}
+
+
+int is_adjacent(int a, int b) {
+    if (b < a) {
+        int tmp = a; 
+        a = b;
+        b = tmp;
+    }
+    switch (b-a) {
+        case 1:
+            return COL(a) == COL(b);
+        case 6:
+            return 1;
+        default:
+            return 0;
+    }
 }
 
 
@@ -177,7 +194,7 @@ void get_adjacency_matrix(SET mask, adjacency_t *adj) {
     for (i = 0; i < NUM_DOTS; i++) {
         if ((mask >> i) & 1) {
             for (j = i; j < NUM_DOTS; j++) {
-                if (((mask >> j) & 1) && IS_ADJACENT(i, j)) {
+                if (((mask >> j) & 1) && is_adjacent(i, j)) {
                     adj->matrix[i][j] = 1;
                     adj->matrix[j][i] = 1;
                     adj->neighbors[i][adj->degree[i]++] = j;
@@ -278,35 +295,67 @@ void print_bitmask(SET mask, int bg, int fg) {
 void print_adjacency_matrix(adjacency_t *adj) {
     int i, j, k;
     for (i = 0; i < NUM_DOTS; i++) {
+        printf("(%d, %d) ", ROW(i), COL(i));
         for (j = 0; j < NUM_DOTS; j++) {
             if (adj->matrix[i][j]) {
-                printf("@ ", adj->matrix[i][j]);
+                printf("@ ");
             } else {
                 printf(". ");
             }
         }
         for (k = 0; k < adj->degree[i]; k++) {
-            printf("%d ", adj->neighbors[i][k]);
+            int neighbor = adj->neighbors[i][k];
+            printf("(%d, %d) ", ROW(neighbor), COL(neighbor));
         }
         printf("\n");
     }
     printf("\n");
 }
 
+
+void depth_first_search(
+        adjacency_t *adj, SET partition, SET path, int point, int depth) {
+    partition = remove(partition, point);
+    path = add(path, point);
+    if (cardinality(path) > 1) {
+        printf("--------\n");
+        print_bitmask(path, EMPTY, RED);
+        printf("--------\n");
+    }
+    int i, neighbor;
+    for (i = 0; i < adj->degree[point]; i++) {
+        neighbor = adj->neighbors[point][i];
+        if (element(neighbor, partition)) {
+            depth_first_search(adj, partition, path, neighbor, depth + 1);
+        }
+    }
+}
+
+
 int main() {
     srand(time(NULL));
 
     int board[NUM_DOTS];
     randomize_board(board);
+    board[5] = RED;
+    board[6] = RED;
 
     print_board(board);
-    print_partitions(board);
+    //print_partitions(board);
 
     adjacency_t adj;
     memset(&adj, 0, sizeof(adj));
-    get_adjacency_matrix(color_mask(board, RED), &adj);
 
-    print_adjacency_matrix(&adj);
+    SET mask = color_mask(board, RED);
+    get_adjacency_matrix(mask, &adj);
+    //print_adjacency_matrix(&adj);
+
+    int point;
+    for (point = 0; point < NUM_DOTS; point++) {
+        if (adj.degree[point] == 1) {
+            depth_first_search(&adj, mask, emptyset, point, 1);
+        }
+    }
 
     return 0;
 }

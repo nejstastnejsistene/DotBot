@@ -12,10 +12,6 @@
 #define POINT(row, col) (NUM_COLS * (col) + (row))
 #define GET_COLUMN(board, col) ((board) + (col) * NUM_ROWS)
 
-#define ABS(x) (((x) < 0) ? -(x): (x))
-#define IS_ADJACENT(a, b) \
-    (ABS((b)-(a)) == 1 || ABS((b)-(a)) == NUM_ROWS)
-
 /* Constants for dealing with caches of board translations. */
 #define NUM_PERMUTATIONS 64 /* 2^6 */
 #define COL_MASK 0x3f       /* 0b111111 */
