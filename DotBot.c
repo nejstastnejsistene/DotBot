@@ -173,6 +173,9 @@ SET build_partition(SET *mask, int point) {
 
 SET find_cycle(SET mask) {
     int num_dots = cardinality(mask);
+    if (num_dots < 4) {
+        return emptyset;
+    }
     SET cycle;
     int i, j, k;
     for (i = 0; i < NUM_PERIMETERS; i++) {
