@@ -12,6 +12,10 @@
 #define POINT(row, col) (NUM_COLS * (col) + (row))
 #define GET_COLUMN(board, col) ((board) + (col) * NUM_ROWS)
 
+#define ABS(x) (((x) < 0) ? -(x): (x))
+#define IS_ADJACENT(a, b) \
+    (ABS((b)-(a)) == 1 || ABS((b)-(a)) == NUM_ROWS)
+
 /* Constants for dealing with caches of board translations. */
 #define NUM_PERMUTATIONS 64 /* 2^6 */
 #define COL_MASK 0x3f       /* 0b111111 */
@@ -54,6 +58,15 @@ typedef struct {
     board_t board;
     int score;
 } translation_t;
+
+/* An adjacency matrix for quick lookups. Also includes the a list
+ * of the neighbors and the degree of each node.
+ */
+typedef struct {
+   int matrix[NUM_DOTS][NUM_DOTS];
+   int neighbors[NUM_DOTS][4];
+   int degree[NUM_DOTS];
+} adjacency_t;
 
 
 /* Select a random dot, that is not equal to `exclude`. */

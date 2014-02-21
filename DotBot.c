@@ -171,6 +171,24 @@ SET build_partition(SET *mask, int point) {
 }
 
 
+/* Compute an adjacency matrix for a bitmask. */
+void get_adjacency_matrix(SET mask, adjacency_t *adj) {
+    int i, j;
+    for (i = 0; i < NUM_DOTS; i++) {
+        if ((mask >> i) & 1) {
+            for (j = i; j < NUM_DOTS; j++) {
+                if (((mask >> j) & 1) && IS_ADJACENT(i, j)) {
+                    adj->matrix[i][j] = 1;
+                    adj->matrix[j][i] = 1;
+                    adj->neighbors[i][adj->degree[i]++] = j;
+                    adj->neighbors[j][adj->degree[j]++] = i;
+                } 
+            }
+        }
+    }
+}
+
+
 SET find_cycle(SET mask) {
     int num_dots = cardinality(mask);
     if (num_dots < 4) {
@@ -197,6 +215,23 @@ SET find_cycle(SET mask) {
         }
     }
     return emptyset;
+}
+
+
+void print_partitions(board_t board) {
+    SET mask, partitions[NUM_DOTS];
+    color_t color;
+    for (color = 0; color < NUM_COLORS; color++) {
+        mask = color_mask(board, color);
+        get_partitions(mask, partitions);
+
+        int i;
+        for (i = 0; i < NUM_DOTS; i++) {
+            if (partitions[i]) {
+                print_bitmask(partitions[i], EMPTY, color);
+            }
+        }
+    }
 }
 
 
@@ -237,36 +272,41 @@ void print_bitmask(SET mask, int bg, int fg) {
     print_board(board);
 }
 
+/* Print an adjacency matrix as an ascii grid, with the numeric
+ * values of a nodes neighbors listed to the right of each row.
+ */
+void print_adjacency_matrix(adjacency_t *adj) {
+    int i, j, k;
+    for (i = 0; i < NUM_DOTS; i++) {
+        for (j = 0; j < NUM_DOTS; j++) {
+            if (adj->matrix[i][j]) {
+                printf("@ ", adj->matrix[i][j]);
+            } else {
+                printf(". ");
+            }
+        }
+        for (k = 0; k < adj->degree[i]; k++) {
+            printf("%d ", adj->neighbors[i][k]);
+        }
+        printf("\n");
+    }
+    printf("\n");
+}
+
 int main() {
     srand(time(NULL));
 
     int board[NUM_DOTS];
     randomize_board(board);
+
     print_board(board);
+    print_partitions(board);
 
-    cache_t cache;
-    memset(cache, 0, sizeof(cache));
+    adjacency_t adj;
+    memset(&adj, 0, sizeof(adj));
+    get_adjacency_matrix(color_mask(board, RED), &adj);
 
-    translation_t result;
-
-    color_t color;
-    for (color = 0; color < NUM_COLORS; color++) {
-        SET mask = color_mask(board, color);
-        SET partitions[NUM_DOTS];
-        get_partitions(mask, partitions);
-        int i;
-        for (i = 0; i < NUM_DOTS; i++) {
-            SET partition = partitions[i];
-            if (partition) {
-                SET cycle = find_cycle(partition);
-                if (cycle) {
-                    print_bitmask(cycle, EMPTY, color);
-                    get_translation(board, cache, cycle, &result);
-                    print_board(result.board);
-                }
-            }
-        }
-    }
+    print_adjacency_matrix(&adj);
 
     return 0;
 }
