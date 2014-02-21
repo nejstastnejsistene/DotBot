@@ -131,7 +131,7 @@ int main() {
 
     while (x < max) {
         if (!get_square(x) && is_valid_cycle(x)) {
-            printf("0x%09llxULL %d\n", to_6x6(x), count_encircled_dots(x));
+            printf("0x%llx %d\n", to_6x6(x), count_encircled_dots(x));
         }
         x = next_set_of_n_elements(x);
     }
