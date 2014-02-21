@@ -314,19 +314,18 @@ void print_adjacency_matrix(adjacency_t *adj) {
 
 
 void depth_first_search(
-        adjacency_t *adj, SET partition, SET path, int point, int depth) {
+        adjacency_t *adj, SET partition, SET path, int point, color_t color) {
     partition = remove(partition, point);
     path = add(path, point);
     if (cardinality(path) > 1) {
-        printf("--------\n");
-        print_bitmask(path, EMPTY, RED);
-        printf("--------\n");
+        printf("-------------\n");
+        print_bitmask(path, EMPTY, color);
     }
     int i, neighbor;
     for (i = 0; i < adj->degree[point]; i++) {
         neighbor = adj->neighbors[point][i];
         if (element(neighbor, partition)) {
-            depth_first_search(adj, partition, path, neighbor, depth + 1);
+            depth_first_search(adj, partition, path, neighbor, color);
         }
     }
 }
@@ -341,19 +340,19 @@ int main() {
     board[6] = RED;
 
     print_board(board);
-    //print_partitions(board);
 
     adjacency_t adj;
     memset(&adj, 0, sizeof(adj));
 
-    SET mask = color_mask(board, RED);
-    get_adjacency_matrix(mask, &adj);
-    //print_adjacency_matrix(&adj);
-
+    color_t color;
     int point;
-    for (point = 0; point < NUM_DOTS; point++) {
-        if (adj.degree[point] == 1) {
-            depth_first_search(&adj, mask, emptyset, point, 1);
+    for (color = 0; color < NUM_COLORS; color++) {
+        SET mask = color_mask(board, color);
+        get_adjacency_matrix(mask, &adj);
+        for (point = 0; point < NUM_DOTS; point++) {
+            if (adj.degree[point] == 1) {
+                depth_first_search(&adj, mask, emptyset, point, color);
+            }
         }
     }
 
