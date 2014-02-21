@@ -7,6 +7,7 @@
 #include "cycles.h"
 
 
+/* Select a random dot, that is not equal to `exclude`. */
 color_t random_dot(color_t exclude) {
     color_t dot = rand() % NUM_COLORS;
     while (dot == exclude) {
@@ -16,6 +17,7 @@ color_t random_dot(color_t exclude) {
 }
 
 
+/* Fill a board with random dots. */
 void randomize_board(board_t board) {
     int i;
     for (i = 0; i < NUM_DOTS; i++) {
@@ -23,6 +25,7 @@ void randomize_board(board_t board) {
     }
 }
 
+/* Compute the bitmask for all dots in `board` of color `color`. */
 SET color_mask(board_t board, color_t color) {
     SET mask = emptyset;
     int i;
@@ -34,14 +37,18 @@ SET color_mask(board_t board, color_t color) {
     return mask;
 }
 
+/* Construct the board resulting from applying `mask` to `board`.
+ * The resulting board is placed in `result`, which also includes
+ * how many points the move is worth.
+ */
+void get_translation(
+        board_t board, cache_t cache, SET mask, translation_t *result) {
 
-void get_translation(board_t board, cache_t cache,
-                     SET mask, translation_t *result) {
     result->score = 0;
 
     int col, col_mask;
     int *dest, *src;
-    for (col = 0; col < NUM_COLS; col++) {
+    for (col = 0; col < NUM_COLS; col++, mask >>= NUM_COLS) {
         col_mask = mask & COL_MASK;
 
         /* Compute the translation if its not in the cache. */
@@ -56,13 +63,14 @@ void get_translation(board_t board, cache_t cache,
         
         /* Update the score. */
         result->score += cache[col][col_mask].score;
-
-        mask >>= NUM_COLS;
     }
 }
 
-
-void compute_translation(board_t board, cache_t cache, int col, int col_mask) {
+/* Compute the effect of apply a column mask to the board, and cache
+ * the resulting column and score.
+ */
+void compute_translation(
+        board_t board, cache_t cache, int col, int col_mask) {
 
     /* Mark that this is present in the cache, and reset the score. */
     cache[col][col_mask].valid = 1;
@@ -84,11 +92,7 @@ void compute_translation(board_t board, cache_t cache, int col, int col_mask) {
 }
 
 
-void shrink(board_t board, int point) {
-    shrink_column(GET_COLUMN(board, COL(point)), ROW(point));
-}
-
-
+/* Shrink a dot, and make the dots above it fall into place. */
 void shrink_column(column_t column, int row) {
     while (row > 0) {
         column[row] = column[row - 1];
@@ -98,6 +102,11 @@ void shrink_column(column_t column, int row) {
 }
 
 
+/* Compute all of the partitions connected partitions of a bitmask.
+ * The results are place in `partitions` as a sparse array, where all
+ * non-zero entries are a bitmask of the partition that includes that
+ * position.
+ */
 void get_partitions(SET mask, SET partitions[NUM_DOTS]) {    
     int point;
     for (point = 0; point < NUM_DOTS; point++) {
@@ -110,41 +119,49 @@ void get_partitions(SET mask, SET partitions[NUM_DOTS]) {
 }
 
 
+/* Build a partition starting at point by performing a flood fill. This
+ * destructively modifies the mask by removing elements from it as
+ * it adds them to the partition.
+ */
 SET build_partition(SET *mask, int point) {
     SET partition = emptyset;
 
     int stack[NUM_DOTS];
     int stacklen = 0;
 
-
+    /* Push `point` onto the stack. */
     *mask = remove(point, *mask);
     stack[stacklen++] = point;
 
     int row, col;
     while (stacklen > 0) {
+        /* Pop a point from the stack. */
         point = stack[--stacklen];
         partition = add(partition, point);
 
         row = ROW(point);
         col = COL(point);
 
+        /* Check each point;, and if it is in the mask, pop it from
+         * the mask and push it onto the stack.
+         */
         point = POINT(row - 1, col);
-        if (check(point) && element(point, *mask)) {
+        if (row > 0 && element(point, *mask)) {
             *mask = remove(point, *mask);
             stack[stacklen++] = point;
         }
         point = POINT(row + 1, col);
-        if (check(point) && element(point, *mask)) {
+        if (row < NUM_ROWS && element(point, *mask)) {
             *mask = remove(point, *mask);
             stack[stacklen++] = point;
         }
         point = POINT(row, col - 1);
-        if (check(point) && element(point, *mask)) { 
+        if (col > 0 && element(point, *mask)) {
             *mask = remove(point, *mask);
             stack[stacklen++] = point;
         }
         point = POINT(row, col + 1);
-        if (check(point) && element(point, *mask)) {
+        if (col < NUM_COLS && element(point, *mask)) {
             *mask = remove(point, *mask);
             stack[stacklen++] = point;
         }
@@ -180,15 +197,20 @@ SET find_cycle(SET mask) {
 }
 
 
-void print_board(int *board) {
+/* Print a colorful UTF8 representation of a board. */
+void print_board(board_t board) {
     int row, col;
     color_t color;
     for (row = 0; row < NUM_ROWS; row++) {
         for (col = 0; col < NUM_COLS; col++) {
             color = board[POINT(row, col)];
             if (color == EMPTY) {
+                /* Print a space for EMPTY dots. */
                 printf("  ");
             } else {
+                /* Print unicode "\u24cf" BLACK CIRCLE surrounded
+                 * by ANSI color codes for the appropriate color.
+                 */
                 printf(" \033[%dm\xe2\x97\x8f\033[0m", color_codes[color]);
             }
         }
@@ -198,8 +220,13 @@ void print_board(int *board) {
 }
 
 
+/* Print a colorful UTF8 representation of a bitmask. */
 void print_bitmask(SET mask, int bg, int fg) {
     int board[NUM_DOTS];
+
+    /* Set all points whose bits are set to `fg`, and everything
+     * else to `bg`. Then print the board!
+     */
     int i;
     for (i = 0; i < NUM_DOTS; i++, mask >>= 1) {
         board[i] = (mask & 1) ? fg : bg;
