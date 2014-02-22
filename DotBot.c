@@ -179,12 +179,12 @@ int find_cycles(vector_t *moves[NUM_DOTS], SET mask) {
             for (j = 0; j < CYCLES_DIM_2 && cycles[i][j]; j++) {
                 for (k = 0; k < CYCLES_DIM_3 && cycles[i][j][k]; k++) {
                     cycle = cycles[i][j][k];
-                    value = num_dots + cardinality(get_encircled_dots(cycle));
+                    value = cardinality(mask | get_encircled_dots(cycle));
                     if ((cycle & mask) == cycle) {
-                        if (moves[value] == NULL) {
-                            moves[value] = vector_new();
+                        if (moves[value - 1] == NULL) {
+                            moves[value - 1] = vector_new();
                         }
-                        vector_append(moves[value], cycle | CYCLE_FLAG);
+                        vector_append(moves[value - 1], cycle | CYCLE_FLAG);
                         count++;
                     }
                 }
@@ -194,35 +194,16 @@ int find_cycles(vector_t *moves[NUM_DOTS], SET mask) {
     for (i = 0; i < NUM_SQUARES; i++) {
         cycle = SQUARES[i];
         if ((cycle & mask) == cycle) {
-            if (moves[num_dots] == NULL) {
-                moves[num_dots] = vector_new();
+            if (moves[num_dots - 1] == NULL) {
+                moves[num_dots - 1] = vector_new();
             }
-            vector_append(moves[num_dots], cycle | CYCLE_FLAG);
+            vector_append(moves[num_dots - 1], cycle | CYCLE_FLAG);
             count++;
             break;
         }
     }
     return count;
 }
-
-
-/*
-void print_partitions(board_t board) {
-    SET mask, partitions[NUM_DOTS];
-    color_t color;
-    for (color = 0; color < NUM_COLORS; color++) {
-        mask = color_mask(board, color);
-        get_partitions(mask, partitions);
-
-        int i;
-        for (i = 0; i < NUM_DOTS; i++) {
-            if (partitions[i]) {
-                print_bitmask(partitions[i], EMPTY, color);
-            }
-        }
-    }
-}
-*/
 
 
 /* Print a colorful UTF8 representation of a board. */
@@ -301,8 +282,8 @@ void depth_first_search(
     if (length > 1 && !visited[start][point]) {
         visited[start][point] = 1;
         visited[point][start] = 1;
-        if (moves[length] == NULL) {
-            moves[length] = vector_new();
+        if (moves[length - 1] == NULL) {
+            moves[length - 1] = vector_new();
         }
         vector_append(moves[length], path);
     }
@@ -320,11 +301,11 @@ void get_moves(board_t board, vector_t *moves[NUM_DOTS]) {
 
     /* Append all the single dots moves. */
     int point;
-    if (moves[1] == NULL) {
-        moves[1] = vector_new();
+    if (moves[0] == NULL) {
+        moves[0] = vector_new();
     }
     for (point = 0; point < NUM_DOTS; point++) {
-        vector_append(moves[1], singleset(point));
+        vector_append(moves[0], singleset(point));
     }
 
     /* A lookup table to prevent duplicate paths. This is based
@@ -356,19 +337,20 @@ void get_moves(board_t board, vector_t *moves[NUM_DOTS]) {
 int main() {
     srand(time(NULL));
 
-    int board[NUM_DOTS];
-    randomize_board(board);
+    int board[NUM_DOTS] = {RED};
+    //randomize_board(board);
     print_board(board);
 
     vector_t *moves[NUM_DOTS] = {NULL};
     get_moves(board, moves);
 
-    int i, j;
-    for (i = 0; i < NUM_DOTS; i++) {
+    int i, j, count = 0;
+    for (i = 0; i < NUM_DOTS + 1; i++) {
         if (moves[i] != NULL) {
-            printf("Score: %d\n", i);
+            printf("Score: %d\n", i + 1);
             for (j = 0; j < moves[i]->length; j++) {
-                print_bitmask(moves[i]->items[j], GREEN, RED);
+                count++;
+                //print_bitmask(moves[i]->items[j], GREEN, RED);
             }
         }
     }
@@ -378,6 +360,8 @@ int main() {
             vector_free(moves[i]);
         }
     }
+
+    printf("Total moves: %d\n", count);
 
     return 0;
 }
