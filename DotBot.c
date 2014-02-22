@@ -206,12 +206,12 @@ void get_adjacency_matrix(SET mask, adjacency_t *adj) {
 }
 
 
-int find_cycles(vector_t *moves, SET mask) {
+int find_cycles(vector_t *moves[NUM_DOTS], SET mask) {
     int num_dots = cardinality(mask);
     if (num_dots < 4) {
         return 0;
     }
-    int start_length = moves->length;
+    int count = 0;
     SET cycle;
     int i, j, k;
     for (i = 0; i < NUM_PERIMETERS; i++) {
@@ -220,7 +220,11 @@ int find_cycles(vector_t *moves, SET mask) {
                 for (k = 0; k < CYCLES_DIM_3 && cycles[i][j][k]; k++) {
                     cycle = cycles[i][j][k];
                     if ((cycle & mask) == cycle) {
-                        vector_append(moves, cycles[i][j][k]);
+                        if (moves[perimeters[i]] == NULL) {
+                            moves[perimeters[i]] = vector_new();
+                        }
+                        vector_append(moves[perimeters[i]], cycles[i][j][k]);
+                        count++;
                     }
                 }
             }  
@@ -229,11 +233,15 @@ int find_cycles(vector_t *moves, SET mask) {
     for (i = 0; i < NUM_SQUARES; i++) {
         cycle = SQUARES[i];
         if ((cycle & mask) == cycle) {
-            vector_append(moves, cycle);
+            if (moves[4] == NULL) {
+                moves[4] = vector_new();
+            }
+            vector_append(moves[4], cycle);
+            count++;
             break;
         }
     }
-    return moves->length - start_length;
+    return count;
 }
 
 
@@ -316,36 +324,44 @@ void print_adjacency_matrix(adjacency_t *adj) {
 
 
 void depth_first_search(
-        vector_t *moves,
+        vector_t *moves[NUM_DOTS],
         int visited[NUM_DOTS][NUM_DOTS],
         int start,
         adjacency_t *adj,
         SET partition,
         SET path,
+        int length,
         int point) {
     partition = remove(partition, point);
     path = add(path, point);
-    if (cardinality(path) > 1 && !visited[start][point]) {
+    length++;
+    if (length > 1 && !visited[start][point]) {
         visited[start][point] = 1;
         visited[point][start] = 1;
-        vector_append(moves, path);
+        if (moves[length] == NULL) {
+            moves[length] = vector_new();
+        }
+        vector_append(moves[length], path);
     }
     int i, neighbor;
     for (i = 0; i < adj->degree[point]; i++) {
         neighbor = adj->neighbors[point][i];
         if (element(neighbor, partition)) {
-            depth_first_search(moves, visited, start, adj, partition, path, neighbor);
+            depth_first_search(moves, visited, start, adj, partition, path, length, neighbor);
         }
     }
 }
 
 
-void get_moves(board_t board, vector_t *moves) {
+void get_moves(board_t board, vector_t *moves[NUM_DOTS]) {
 
     /* Append all the single dots moves. */
     int point;
+    if (moves[1] == NULL) {
+        moves[1] = vector_new();
+    }
     for (point = 0; point < NUM_DOTS; point++) {
-        vector_append(moves, singleset(point));
+        vector_append(moves[1], singleset(point));
     }
 
     /* A lookup table to prevent duplicate paths. This is based
@@ -366,7 +382,7 @@ void get_moves(board_t board, vector_t *moves) {
             /* Perform a DFS on each node with a degree of 1. */
             for (point = 0; point < NUM_DOTS; point++) {
                 if (adj.degree[point] == 1) {
-                    depth_first_search(moves, visited, point, &adj, mask, emptyset, point);
+                    depth_first_search(moves, visited, point, &adj, mask, emptyset, 0, point);
                 }
             }
         }
@@ -381,15 +397,23 @@ int main() {
     randomize_board(board);
     print_board(board);
 
-    vector_t *moves = vector_new();
+    vector_t *moves[NUM_DOTS] = {NULL};
     get_moves(board, moves);
 
-    int i;
-    for (i = 0; i < moves->length; i++) {
-        print_bitmask(moves->items[i], GREEN, RED);
+    int i, j;
+    for (i = 0; i < NUM_DOTS; i++) {
+        if (moves[i] != NULL) {
+            for (j = 0; j < moves[i]->length; j++) {
+                print_bitmask(moves[i]->items[j], GREEN, RED);
+            }
+        }
     }
 
-    vector_free(moves);
+    for (i = 0; i < NUM_DOTS; i++) {
+        if (moves[i] != NULL) {
+            vector_free(moves[i]);
+        }
+    }
 
     return 0;
 }

@@ -22,6 +22,7 @@ void vector_free(vector_t *vector) {
 }
 
 void vector_append(vector_t *vector, SET set) {
+    if (!set) printf("EMPTYSET\n");
     if (vector->length == vector->bufsize) {
         vector->bufsize *= 2;
         vector->items = realloc(vector->items, sizeof(SET) * vector->bufsize);
