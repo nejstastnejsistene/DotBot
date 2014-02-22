@@ -17,6 +17,8 @@
 #define NUM_PERMUTATIONS 64 /* 2^6 */
 #define COL_MASK 0x3f       /* 0b111111 */
 
+#define CYCLE_FLAG singleset(NUM_DOTS)
+
 /* An array of dots and their colors. */
 typedef int board_t[NUM_DOTS];
 

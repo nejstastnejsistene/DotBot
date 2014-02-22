@@ -102,75 +102,6 @@ void shrink_column(column_t column, int row) {
 }
 
 
-/* Compute all of the partitions connected partitions of a bitmask.
- * The results are place in `partitions` as a sparse array, where all
- * non-zero entries are a bitmask of the partition that includes that
- * position.
- */
-void get_partitions(SET mask, SET partitions[NUM_DOTS]) {    
-    int point;
-    for (point = 0; point < NUM_DOTS; point++) {
-        if (element(point, mask)) {
-            partitions[point] = build_partition(&mask, point);
-        } else {
-            partitions[point] = emptyset;
-        }
-    }
-}
-
-
-/* Build a partition starting at point by performing a flood fill. This
- * destructively modifies the mask by removing elements from it as
- * it adds them to the partition.
- */
-SET build_partition(SET *mask, int point) {
-    SET partition = emptyset;
-
-    int stack[NUM_DOTS];
-    int stacklen = 0;
-
-    /* Push `point` onto the stack. */
-    *mask = remove(*mask, point);
-    stack[stacklen++] = point;
-
-    int row, col;
-    while (stacklen > 0) {
-        /* Pop a point from the stack. */
-        point = stack[--stacklen];
-        partition = add(partition, point);
-
-        row = ROW(point);
-        col = COL(point);
-
-        /* Check each point;, and if it is in the mask, pop it from
-         * the mask and push it onto the stack.
-         */
-        point = POINT(row - 1, col);
-        if (row > 0 && element(point, *mask)) {
-            *mask = remove(*mask, point);
-            stack[stacklen++] = point;
-        }
-        point = POINT(row + 1, col);
-        if (row < NUM_ROWS && element(point, *mask)) {
-            *mask = remove(*mask, point);
-            stack[stacklen++] = point;
-        }
-        point = POINT(row, col - 1);
-        if (col > 0 && element(point, *mask)) {
-            *mask = remove(*mask, point);
-            stack[stacklen++] = point;
-        }
-        point = POINT(row, col + 1);
-        if (col < NUM_COLS && element(point, *mask)) {
-            *mask = remove(*mask, point);
-            stack[stacklen++] = point;
-        }
-    }
-
-    return partition;
-}
-
-
 int is_adjacent(int a, int b) {
     if (b < a) {
         int tmp = a; 
@@ -205,13 +136,42 @@ void get_adjacency_matrix(SET mask, adjacency_t *adj) {
     }
 }
 
+int get_encircled_dots(SET x) {
+    int r, c;
+    for (r = 0; r < NUM_ROWS; r++) {
+        c = 0;
+        while (!element(POINT(r, c), x)) {
+            x = add(x, POINT(r, c));
+            c++;
+        }
+        c = NUM_COLS - 1;
+        while (!element(POINT(r, c), x)) {
+            x = add(x, POINT(r, c));
+            c--;
+        }
+    }
+    for (c = 0; c < NUM_COLS; c++) {
+        r = 0;
+        while (!element(POINT(r, c), x)) {
+            x = add(x, POINT(r, c));
+            r++;
+        }
+        r = NUM_ROWS - 1;
+        while (!element(POINT(r, c), x)) {
+            x = add(x, POINT(r, c));
+            r--;
+        }
+    }
+    return (~x) & first_set_of_n_elements(NUM_ROWS * NUM_COLS);
+}
+
 
 int find_cycles(vector_t *moves[NUM_DOTS], SET mask) {
     int num_dots = cardinality(mask);
     if (num_dots < 4) {
         return 0;
     }
-    int count = 0;
+    int value, count = 0;
     SET cycle;
     int i, j, k;
     for (i = 0; i < NUM_PERIMETERS; i++) {
@@ -219,11 +179,12 @@ int find_cycles(vector_t *moves[NUM_DOTS], SET mask) {
             for (j = 0; j < CYCLES_DIM_2 && cycles[i][j]; j++) {
                 for (k = 0; k < CYCLES_DIM_3 && cycles[i][j][k]; k++) {
                     cycle = cycles[i][j][k];
+                    value = num_dots + cardinality(get_encircled_dots(cycle));
                     if ((cycle & mask) == cycle) {
-                        if (moves[perimeters[i]] == NULL) {
-                            moves[perimeters[i]] = vector_new();
+                        if (moves[value] == NULL) {
+                            moves[value] = vector_new();
                         }
-                        vector_append(moves[perimeters[i]], cycles[i][j][k]);
+                        vector_append(moves[value], cycle | CYCLE_FLAG);
                         count++;
                     }
                 }
@@ -233,10 +194,10 @@ int find_cycles(vector_t *moves[NUM_DOTS], SET mask) {
     for (i = 0; i < NUM_SQUARES; i++) {
         cycle = SQUARES[i];
         if ((cycle & mask) == cycle) {
-            if (moves[4] == NULL) {
-                moves[4] = vector_new();
+            if (moves[num_dots] == NULL) {
+                moves[num_dots] = vector_new();
             }
-            vector_append(moves[4], cycle);
+            vector_append(moves[num_dots], cycle | CYCLE_FLAG);
             count++;
             break;
         }
@@ -245,6 +206,7 @@ int find_cycles(vector_t *moves[NUM_DOTS], SET mask) {
 }
 
 
+/*
 void print_partitions(board_t board) {
     SET mask, partitions[NUM_DOTS];
     color_t color;
@@ -260,6 +222,7 @@ void print_partitions(board_t board) {
         }
     }
 }
+*/
 
 
 /* Print a colorful UTF8 representation of a board. */
@@ -403,6 +366,7 @@ int main() {
     int i, j;
     for (i = 0; i < NUM_DOTS; i++) {
         if (moves[i] != NULL) {
+            printf("Score: %d\n", i);
             for (j = 0; j < moves[i]->length; j++) {
                 print_bitmask(moves[i]->items[j], GREEN, RED);
             }
