@@ -26,7 +26,7 @@ void randomize_board(board_t board) {
 }
 
 /* Compute the bitmask for all dots in `board` of color `color`. */
-SET color_mask(board_t board, color_t color) {
+SET get_color_mask(board_t board, color_t color) {
     SET mask = emptyset;
     int i;
     for (i = 0; i < NUM_DOTS; i++) {
@@ -99,6 +99,69 @@ void shrink_column(column_t column, int row) {
         row--;
     }
     column[0] = EMPTY;
+}
+
+
+/* Compute all of the partitions connected partitions of a bitmask. */
+void get_partitions(SET mask, vector_t *partitions) {
+    int point;
+    for (point = 0; point < NUM_DOTS; point++) {
+        if (element(point, mask)) {
+            vector_append(partitions, build_partition(&mask, point));
+        }
+    }
+}
+
+
+/* Build a partition starting at point by performing a flood fill. This
+* destructively modifies the mask by removing elements from it as
+* it adds them to the partition.
+*/
+SET build_partition(SET *mask, int point) {
+    SET partition = emptyset;
+
+    int stack[NUM_DOTS];
+    int stacklen = 0;
+
+    /* Push `point` onto the stack. */
+    *mask = remove(*mask, point);
+    stack[stacklen++] = point;
+
+    int row, col;
+    while (stacklen > 0) {
+        /* Pop a point from the stack. */
+        point = stack[--stacklen];
+        partition = add(partition, point);
+
+        row = ROW(point);
+        col = COL(point);
+
+        /* Check each point;, and if it is in the mask, pop it from
+         * the mask and push it onto the stack.
+         */
+        point = POINT(row - 1, col);
+        if (row > 0 && element(point, *mask)) {
+            *mask = remove(*mask, point);
+            stack[stacklen++] = point;
+        }
+        point = POINT(row + 1, col);
+        if (row < NUM_ROWS && element(point, *mask)) {
+            *mask = remove(*mask, point);
+            stack[stacklen++] = point;
+        }
+        point = POINT(row, col - 1);
+        if (col > 0 && element(point, *mask)) {
+            *mask = remove(*mask, point);
+            stack[stacklen++] = point;
+        }
+        point = POINT(row, col + 1);
+        if (col < NUM_COLS && element(point, *mask)) {
+            *mask = remove(*mask, point);
+            stack[stacklen++] = point;
+        }
+    }
+
+    return partition;
 }
 
 
@@ -185,8 +248,8 @@ int moves_contains(moves_t moves, int value, SET set) {
     return vector_contains(&moves[value - 1], set);
 }
 
-int find_cycles(moves_t moves, SET mask) {
-    int num_dots = cardinality(mask);
+int get_cycles(moves_t moves, SET partition, SET color_mask) {
+    int num_dots = cardinality(partition);
     if (num_dots < 4) {
         return 0;
     }
@@ -200,9 +263,9 @@ int find_cycles(moves_t moves, SET mask) {
             for (j = 0; j < CYCLES_DIM_2 && cycles[i][j]; j++) {
                 for (k = 0; k < CYCLES_DIM_3 && cycles[i][j][k]; k++) {
                     cycle = cycles[i][j][k];
-                    result = mask | get_encircled_dots(cycle);
-                    value = cardinality(mask | get_encircled_dots(result));
-                    if ((cycle & mask) == cycle) {
+                    if (MATCHES(cycle, partition)) {
+                        result = color_mask | get_encircled_dots(cycle);
+                        value = cardinality(result);
                         if (!moves_contains(seen, value, result)) {
                             moves_add(seen, value, result);
                             moves_add(moves, value, cycle | CYCLE_FLAG);
@@ -216,8 +279,9 @@ int find_cycles(moves_t moves, SET mask) {
     moves_free(seen);
     for (i = 0; i < NUM_SQUARES; i++) {
         cycle = SQUARES[i];
-        if ((cycle & mask) == cycle) {
-            moves_add(moves, num_dots, cycle | CYCLE_FLAG);
+        if (MATCHES(cycle, partition)) {
+            value = cardinality(color_mask);
+            moves_add(moves, value, cycle | CYCLE_FLAG);
             count++;
             break;
         }
@@ -308,7 +372,8 @@ void depth_first_search(
     for (i = 0; i < adj->degree[point]; i++) {
         neighbor = adj->neighbors[point][i];
         if (element(neighbor, partition)) {
-            depth_first_search(moves, visited, start, adj, partition, path, length, neighbor);
+            depth_first_search(moves, visited,
+                    start, adj, partition, path, length, neighbor);
         }
     }
 }
@@ -324,22 +389,33 @@ void get_moves(board_t board, moves_t moves) {
 
     adjacency_t adj;
     memset(&adj, 0, sizeof(adj));
+
+    vector_t partitions;
+    vector_init(&partitions);
+
     color_t color;
     for (color = 0; color < NUM_COLORS; color++) {
-        SET mask = color_mask(board, color);
-        get_adjacency_matrix(mask, &adj);
+        SET color_mask = get_color_mask(board, color);
+        get_adjacency_matrix(color_mask, &adj);
+        get_partitions(color_mask, &partitions);
 
-        if (!find_cycles(moves, mask)) {
+        int i;
+        for (i = 0; i < partitions.length; i++)  {
+            if (!get_cycles(moves, partitions.items[i], color_mask)) {
 
-            /* Perform a DFS on each node with a degree of 1 or less. */
-            int point;
-            for (point = 0; point < NUM_DOTS; point++) {
-                if (adj.degree[point] < 2) {
-                    depth_first_search(moves, visited, point, &adj, mask, emptyset, 0, point);
+                /* Perform a DFS on each node with a degree of 1 or less. */
+                int point;
+                for (point = 0; point < NUM_DOTS; point++) {
+                    if (adj.degree[point] < 2) {
+                        depth_first_search(moves, visited, point, &adj,
+                                partitions.items[i], emptyset, 0, point);
+                    }
                 }
             }
         }
+        vector_reset(&partitions);
     }
+    vector_free(&partitions);
 }
 
 

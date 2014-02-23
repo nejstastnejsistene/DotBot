@@ -12,6 +12,8 @@ typedef struct {
 } vector_t;
 
 void vector_init(vector_t *vector);
+void vector_free(vector_t *vector);
+void vector_reset(vector_t *vector);
 void vector_append(vector_t *vector, SET set);
 int vector_contains(vector_t *vector, SET set);
 

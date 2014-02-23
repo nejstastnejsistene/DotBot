@@ -13,6 +13,14 @@ void vector_init(vector_t *vector) {
     vector->length = 0;
 }
 
+void vector_free(vector_t *vector) {
+    free(vector->items);
+}
+
+void vector_reset(vector_t *vector) {
+    vector->length = 0;
+}
+
 void vector_append(vector_t *vector, SET set) {
     if (vector->length == vector->bufsize) {
         vector->bufsize *= 2;

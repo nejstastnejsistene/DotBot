@@ -18,6 +18,7 @@
 #define COL_MASK 0x3f       /* 0b111111 */
 
 #define CYCLE_FLAG singleset(NUM_DOTS)
+#define MATCHES(p, mask) (((p) & (mask)) == (p))
 
 /* An array of dots and their colors. */
 typedef int board_t[NUM_DOTS];
@@ -76,7 +77,7 @@ int random_dot(color_t exclude);
 void randomize_board(board_t board);
 
 /* Compute the bitmask for all dots in `board` of color `color`. */
-SET color_mask(board_t board, color_t color);
+SET get_color_mask(board_t board, color_t color);
 
 /* Construct the board resulting from applying `mask` to `board`.
  * The resulting board is placed in `result`, which also includes
@@ -92,6 +93,15 @@ void compute_translation(board_t board, cache_t cache, int col, int perm);
 
 /* Shrink a dot, and make the dots above it fall into place. */
 void shrink_column(int column[NUM_ROWS], int row);
+
+/* Compute all of the partitions connected partitions of a bitmask. */
+void get_partitions(SET mask, vector_t *partitions);
+
+/* Build a partition starting at point by performing a flood fill. This
+* destructively modifies the mask by removing elements from it as
+* it adds them to the partition.
+*/
+SET build_partition(SET *mask, int point);
 
 /* ANSI color codes for drawing the dots. */
 int color_codes[5] = { 31, 32, 33, 35, 36 };
