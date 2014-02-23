@@ -299,7 +299,7 @@ void depth_first_search(
     partition = remove(partition, point);
     path = add(path, point);
     length++;
-    if (length > 1 && !visited[start][point]) {
+    if (!visited[start][point]) {
         visited[start][point] = 1;
         visited[point][start] = 1;
         moves_add(moves, length, path);
@@ -315,12 +315,6 @@ void depth_first_search(
 
 
 void get_moves(board_t board, moves_t moves) {
-
-    /* Append all the single dots moves. */
-    int point;
-    for (point = 0; point < NUM_DOTS; point++) {
-        moves_add(moves, 1, singleset(point));
-    }
 
     /* A lookup table to prevent duplicate paths. This is based
      * on the assumption that all paths can be uniquely identified
@@ -338,6 +332,7 @@ void get_moves(board_t board, moves_t moves) {
         if (!find_cycles(moves, mask)) {
 
             /* Perform a DFS on each node with a degree of 1. */
+            int point;
             for (point = 0; point < NUM_DOTS; point++) {
                 if (adj.degree[point] == 1) {
                     depth_first_search(moves, visited, point, &adj, mask, emptyset, 0, point);
@@ -352,7 +347,7 @@ int main() {
     srand(time(NULL));
 
     int board[NUM_DOTS] = {RED};
-    //randomize_board(board);
+    randomize_board(board);
     print_board(board);
 
     moves_t moves;
@@ -360,7 +355,7 @@ int main() {
     get_moves(board, moves);
 
     int i, j, count = 0;
-    for (i = 0; i < NUM_DOTS + 1; i++) {
+    for (i = 0; i < NUM_DOTS; i++) {
         if (moves[i].length > 0) {
             printf("Score: %d\n", i + 1);
             for (j = 0; j < moves[i].length; j++, count++) {
