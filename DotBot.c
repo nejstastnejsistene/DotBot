@@ -331,10 +331,10 @@ void get_moves(board_t board, moves_t moves) {
 
         if (!find_cycles(moves, mask)) {
 
-            /* Perform a DFS on each node with a degree of 1. */
+            /* Perform a DFS on each node with a degree of 1 or less. */
             int point;
             for (point = 0; point < NUM_DOTS; point++) {
-                if (adj.degree[point] == 1) {
+                if (adj.degree[point] < 2) {
                     depth_first_search(moves, visited, point, &adj, mask, emptyset, 0, point);
                 }
             }
