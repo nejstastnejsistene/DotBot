@@ -108,6 +108,7 @@ void get_partitions(SET mask, vector_t *partitions);
 */
 SET build_partition(SET *mask, int point);
 
+void board_init(board_t *board);
 void update_adjacency_matrix(SET mask, adjacency_t *adj);
 int is_adjacent(int a, int b);
 

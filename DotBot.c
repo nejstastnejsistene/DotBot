@@ -171,6 +171,16 @@ SET build_partition(SET *mask, int point) {
 }
 
 
+void board_init(board_t *board) {
+    memset(&board->adj, 0, sizeof(board->adj));
+    color_t color;
+    for (color = 0; color < NUM_COLORS; color++) {
+        board->color_masks[color] = get_color_mask(board->board, color);
+        update_adjacency_matrix(board->color_masks[color], &board->adj);
+    }
+}
+
+
 /* Update an adjacency matrix for a bitmask. */
 void update_adjacency_matrix(SET mask, adjacency_t *adj) {
     int i, j;
@@ -454,14 +464,8 @@ int main() {
     srand(seed);
 
     board_t board;
-    memset(&board, 0, sizeof(board));
-
     randomize_board(board.board);
-    color_t color;
-    for (color = 0; color < NUM_COLORS; color++) {
-        board.color_masks[color] = get_color_mask(board.board, color);
-        update_adjacency_matrix(board.color_masks[color], &board.adj);
-    }
+    board_init(&board);
     print_board(board.board);
 
     cache_t cache;
@@ -473,7 +477,7 @@ int main() {
 
     SET move = choose_move(&board, cache, moves, 1);
 
-    color = EMPTY;
+    color_t color = EMPTY;
     int i;
     for (i = 0; i < NUM_DOTS; i++) {
         if (element(i, move)) {
