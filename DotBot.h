@@ -20,13 +20,6 @@
 #define CYCLE_FLAG singleset(NUM_DOTS)
 #define MATCHES(p, mask) (((p) & (mask)) == (p))
 
-/* An array of dots and their colors. */
-typedef int board_t[NUM_DOTS];
-
-/* A single column of a board, useful for */
-typedef int column_t[NUM_ROWS];
-
-
 /* Each color is represented by a number in [0,5), and -1 means empty. */
 typedef enum {
     EMPTY = -1,
@@ -37,6 +30,24 @@ typedef enum {
     BLUE,
     NUM_COLORS
 } color_t;
+
+/* An adjacency matrix for quick lookups. Also includes the a list
+ * of the neighbors and the degree of each node.
+ */
+typedef struct {
+   int matrix[NUM_DOTS][NUM_DOTS];
+   int neighbors[NUM_DOTS][4];
+   int degree[NUM_DOTS];
+} adjacency_t;
+
+typedef struct {
+    color_t board[NUM_DOTS];
+    SET color_masks[NUM_COLORS];
+    adjacency_t adj;
+} board_t;
+
+/* A single column of a board, useful for */
+typedef int column_t[NUM_ROWS];
 
 /* Moves made to the board are cached by computing the effect on each
  * column separately. This way, instead of needing 2^6 slots, we can
@@ -55,18 +66,9 @@ typedef struct {
 typedef cache_entry cache_t[NUM_COLS][NUM_PERMUTATIONS];
 
 typedef struct {
-    board_t board;
+    color_t board[NUM_DOTS];
     int score;
 } translation_t;
-
-/* An adjacency matrix for quick lookups. Also includes the a list
- * of the neighbors and the degree of each node.
- */
-typedef struct {
-   int matrix[NUM_DOTS][NUM_DOTS];
-   int neighbors[NUM_DOTS][4];
-   int degree[NUM_DOTS];
-} adjacency_t;
 
 typedef vector_t moves_t[NUM_DOTS];
 
@@ -74,22 +76,22 @@ typedef vector_t moves_t[NUM_DOTS];
 int random_dot(color_t exclude);
 
 /* Fill a board with random dots. */
-void randomize_board(board_t board);
+void randomize_board(color_t board[NUM_DOTS]);
 
 /* Compute the bitmask for all dots in `board` of color `color`. */
-SET get_color_mask(board_t board, color_t color);
+SET get_color_mask(color_t board[NUM_DOTS], color_t color);
 
 /* Construct the board resulting from applying `mask` to `board`.
  * The resulting board is placed in `result`, which also includes
  * how many points the move is worth.
  */
-void get_translation(board_t board, cache_t cache,
+void get_translation(board_t *board, cache_t cache,
                      SET mask, translation_t *result);
 
 /* Compute the effect of apply a column mask to the board, and cache
  * the resulting column and score.
  */
-void compute_translation(board_t board, cache_t cache, int col, int perm);
+void compute_translation(board_t *board, cache_t cache, int col, int perm);
 
 /* Shrink a dot, and make the dots above it fall into place. */
 void shrink_column(int column[NUM_ROWS], int row);
@@ -103,15 +105,15 @@ void get_partitions(SET mask, vector_t *partitions);
 */
 SET build_partition(SET *mask, int point);
 
-void get_adjacency_matrix(SET mask, adjacency_t *adj);
+void update_adjacency_matrix(SET mask, adjacency_t *adj);
 int is_adjacent(int a, int b);
 
 void moves_free(moves_t moves);
 void moves_add(moves_t moves, int value, SET move);
 int moves_contains(moves_t moves, int value, SET set);
 
-void get_moves(board_t board, moves_t moves);
-int get_cycles(moves_t moves, SET partition, SET color_mask);
+void get_moves(board_t *board, moves_t moves);
+int get_cycles(moves_t moves, SET partition, color_t color, SET color_mask);
 int get_encircled_dots(SET x);
 void depth_first_search(
         moves_t moves,

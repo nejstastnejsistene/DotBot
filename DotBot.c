@@ -18,7 +18,7 @@ color_t random_dot(color_t exclude) {
 
 
 /* Fill a board with random dots. */
-void randomize_board(board_t board) {
+void randomize_board(color_t board[NUM_DOTS]) {
     int i;
     for (i = 0; i < NUM_DOTS; i++) {
         board[i] = random_dot(EMPTY);
@@ -26,7 +26,7 @@ void randomize_board(board_t board) {
 }
 
 /* Compute the bitmask for all dots in `board` of color `color`. */
-SET get_color_mask(board_t board, color_t color) {
+SET get_color_mask(color_t board[NUM_DOTS], color_t color) {
     SET mask = emptyset;
     int i;
     for (i = 0; i < NUM_DOTS; i++) {
@@ -37,12 +37,19 @@ SET get_color_mask(board_t board, color_t color) {
     return mask;
 }
 
+
 /* Construct the board resulting from applying `mask` to `board`.
  * The resulting board is placed in `result`, which also includes
  * how many points the move is worth.
  */
 void get_translation(
-        board_t board, cache_t cache, SET mask, translation_t *result) {
+        board_t *board, cache_t cache, SET mask, translation_t *result) {
+
+    if (mask & CYCLE_FLAG) {
+        color_t color = mask >> 37;
+        mask |= get_encircled_dots(mask);
+        mask |= board->color_masks[color];
+    }
 
     result->score = 0;
 
@@ -70,14 +77,14 @@ void get_translation(
  * the resulting column and score.
  */
 void compute_translation(
-        board_t board, cache_t cache, int col, int col_mask) {
+        board_t *board, cache_t cache, int col, int col_mask) {
 
     /* Mark that this is present in the cache, and reset the score. */
     cache[col][col_mask].valid = 1;
     cache[col][col_mask].score = 0;
 
     /* Copy the row from the board to the cache. */
-    int *src = GET_COLUMN(board, col);
+    int *src = GET_COLUMN(board->board, col);
     int *dest = cache[col][col_mask].translation;
     memcpy(dest, src, sizeof(int) * NUM_ROWS);
 
@@ -165,8 +172,8 @@ SET build_partition(SET *mask, int point) {
 }
 
 
-/* Compute an adjacency matrix for a bitmask. */
-void get_adjacency_matrix(SET mask, adjacency_t *adj) {
+/* Update an adjacency matrix for a bitmask. */
+void update_adjacency_matrix(SET mask, adjacency_t *adj) {
     int i, j;
     for (i = 0; i < NUM_DOTS; i++) {
         if ((mask >> i) & 1) {
@@ -223,7 +230,27 @@ int moves_contains(moves_t moves, int value, SET set) {
 }
 
 
-void get_moves(board_t board, moves_t moves) {
+SET choose_move(board_t *board, cache_t cache, moves_t moves, int depth) {
+    int max_value = 0;
+    SET max_path = emptyset;
+
+    translation_t result;
+    int i, j;
+    for (i = 0; i < NUM_DOTS ; i++) {
+        for (j = 0; j < moves[i].length; j++) {
+            get_translation(board, cache, moves[i].items[j], &result);
+            if (result.score > max_value) {
+                max_value = result.score;
+                max_path = moves[i].items[j];
+            }
+        }
+    }
+
+    return max_path;
+}
+
+
+void get_moves(board_t *board, moves_t moves) {
 
     /* A lookup table to prevent duplicate paths. This is based
      * on the assumption that all paths can be uniquely identified
@@ -231,27 +258,24 @@ void get_moves(board_t board, moves_t moves) {
      */
     int visited[NUM_DOTS][NUM_DOTS] = {{0}};
 
-    adjacency_t adj;
-    memset(&adj, 0, sizeof(adj));
-
     vector_t partitions;
     vector_init(&partitions);
 
     color_t color;
     for (color = 0; color < NUM_COLORS; color++) {
-        SET color_mask = get_color_mask(board, color);
-        get_adjacency_matrix(color_mask, &adj);
+        SET color_mask = board->color_masks[color];
         get_partitions(color_mask, &partitions);
 
         int i;
         for (i = 0; i < partitions.length; i++)  {
-            if (!get_cycles(moves, partitions.items[i], color_mask)) {
+            if (!get_cycles(moves, partitions.items[i], color, color_mask)) {
 
                 /* Perform a DFS on each node with a degree of 1 or less. */
                 int point;
                 for (point = 0; point < NUM_DOTS; point++) {
-                    if (adj.degree[point] < 2) {
-                        depth_first_search(moves, visited, point, &adj,
+                    if (board->adj.degree[point] < 2) {
+                        depth_first_search(
+                                moves, visited, point, &board->adj, 
                                 partitions.items[i], emptyset, 0, point);
                     }
                 }
@@ -263,7 +287,7 @@ void get_moves(board_t board, moves_t moves) {
 }
 
 
-int get_cycles(moves_t moves, SET partition, SET color_mask) {
+int get_cycles(moves_t moves, SET partition, color_t color, SET color_mask) {
     int num_dots = cardinality(partition);
     if (num_dots < 4) {
         return 0;
@@ -283,7 +307,7 @@ int get_cycles(moves_t moves, SET partition, SET color_mask) {
                         value = cardinality(result);
                         if (!moves_contains(seen, value, result)) {
                             moves_add(seen, value, result);
-                            moves_add(moves, value, cycle | CYCLE_FLAG);
+                            moves_add(moves, value, cycle | CYCLE_FLAG | (SET)color << 37);
                             count++;
                         }
                     }
@@ -296,7 +320,7 @@ int get_cycles(moves_t moves, SET partition, SET color_mask) {
         cycle = SQUARES[i];
         if (MATCHES(cycle, partition)) {
             value = cardinality(color_mask);
-            moves_add(moves, value, cycle | CYCLE_FLAG);
+            moves_add(moves, value, cycle | CYCLE_FLAG | (SET)color << 37);
             count++;
             break;
         }
@@ -364,7 +388,7 @@ void depth_first_search(
 
 
 /* Print a colorful UTF8 representation of a board. */
-void print_board(board_t board) {
+void print_board(color_t board[NUM_DOTS]) {
     int row, col;
     color_t color;
     for (row = 0; row < NUM_ROWS; row++) {
@@ -427,27 +451,43 @@ void print_adjacency_matrix(adjacency_t *adj) {
 int main() {
     srand(time(NULL));
 
-    int board[NUM_DOTS] = {RED};
-    randomize_board(board);
-    print_board(board);
+    board_t board;
+    memset(&board, 0, sizeof(board));
+
+    randomize_board(board.board);
+    color_t color;
+    for (color = 0; color < NUM_COLORS; color++) {
+        board.color_masks[color] = get_color_mask(board.board, color);
+        update_adjacency_matrix(board.color_masks[color], &board.adj);
+    }
+    print_board(board.board);
+
+    cache_t cache;
+    memset(&cache, 0, sizeof(cache));
 
     moves_t moves;
     memset(&moves, 0, sizeof(moves));
-    get_moves(board, moves);
+    get_moves(&board, moves);
+    printf("%d moves\n", moves->length);
 
-    int i, j, count = 0;
+    SET move = choose_move(&board, cache, moves, 1);
+
+    color = EMPTY;
+    int i;
     for (i = 0; i < NUM_DOTS; i++) {
-        if (moves[i].length > 0) {
-            printf("Score: %d\n", i + 1);
-            for (j = 0; j < moves[i].length; j++, count++) {
-                print_bitmask(moves[i].items[j], GREEN, RED);
-            }
+        if (element(i, move)) {
+            color = board.board[i];
+            break;
         }
     }
 
-    moves_free(moves);
+    translation_t result;
+    get_translation(&board, cache, move, &result);
 
-    printf("Total moves: %d\n", count);
+    printf("Score: %d\n", result.score);
+    print_bitmask(move, EMPTY, color);
+    print_board(result.board);
+    moves_free(moves);
 
     return 0;
 }
