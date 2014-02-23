@@ -11,8 +11,8 @@ typedef struct {
     int length;
 } vector_t;
 
-vector_t *vector_new();
-void vector_free(vector_t *vector);
+void vector_init(vector_t *vector);
 void vector_append(vector_t *vector, SET set);
+int vector_contains(vector_t *vector, SET set);
 
 #endif // VECTOR_H

@@ -165,39 +165,59 @@ int get_encircled_dots(SET x) {
     return (~x) & first_set_of_n_elements(NUM_ROWS * NUM_COLS);
 }
 
+void moves_free(moves_t moves) {
+    int i;
+    for (i = 0; i < 36; i++) {
+        if (moves[i].bufsize > 0) {
+            free(moves[i].items);
+        }
+    }
+}
 
-int find_cycles(vector_t *moves[NUM_DOTS], SET mask) {
+void moves_add(moves_t moves, int value, SET move) {
+    if (moves[value - 1].bufsize == 0) {
+        vector_init(&moves[value - 1]);
+    }
+    vector_append(&moves[value - 1], move);
+}
+
+int moves_contains(moves_t moves, int value, SET set) {
+    return vector_contains(&moves[value - 1], set);
+}
+
+int find_cycles(moves_t moves, SET mask) {
     int num_dots = cardinality(mask);
     if (num_dots < 4) {
         return 0;
     }
+    moves_t seen;
+    memset(&seen, 0, sizeof(seen));
     int value, count = 0;
-    SET cycle;
+    SET cycle, result;
     int i, j, k;
     for (i = 0; i < NUM_PERIMETERS; i++) {
         if (num_dots >= perimeters[i]) {
             for (j = 0; j < CYCLES_DIM_2 && cycles[i][j]; j++) {
                 for (k = 0; k < CYCLES_DIM_3 && cycles[i][j][k]; k++) {
                     cycle = cycles[i][j][k];
-                    value = cardinality(mask | get_encircled_dots(cycle));
+                    result = mask | get_encircled_dots(cycle);
+                    value = cardinality(mask | get_encircled_dots(result));
                     if ((cycle & mask) == cycle) {
-                        if (moves[value - 1] == NULL) {
-                            moves[value - 1] = vector_new();
+                        if (!moves_contains(seen, value, result)) {
+                            moves_add(seen, value, result);
+                            moves_add(moves, value, cycle | CYCLE_FLAG);
+                            count++;
                         }
-                        vector_append(moves[value - 1], cycle | CYCLE_FLAG);
-                        count++;
                     }
                 }
             }  
         }
     }
+    moves_free(seen);
     for (i = 0; i < NUM_SQUARES; i++) {
         cycle = SQUARES[i];
         if ((cycle & mask) == cycle) {
-            if (moves[num_dots - 1] == NULL) {
-                moves[num_dots - 1] = vector_new();
-            }
-            vector_append(moves[num_dots - 1], cycle | CYCLE_FLAG);
+            moves_add(moves, num_dots, cycle | CYCLE_FLAG);
             count++;
             break;
         }
@@ -268,7 +288,7 @@ void print_adjacency_matrix(adjacency_t *adj) {
 
 
 void depth_first_search(
-        vector_t *moves[NUM_DOTS],
+        moves_t moves,
         int visited[NUM_DOTS][NUM_DOTS],
         int start,
         adjacency_t *adj,
@@ -282,10 +302,7 @@ void depth_first_search(
     if (length > 1 && !visited[start][point]) {
         visited[start][point] = 1;
         visited[point][start] = 1;
-        if (moves[length - 1] == NULL) {
-            moves[length - 1] = vector_new();
-        }
-        vector_append(moves[length], path);
+        moves_add(moves, length, path);
     }
     int i, neighbor;
     for (i = 0; i < adj->degree[point]; i++) {
@@ -297,15 +314,12 @@ void depth_first_search(
 }
 
 
-void get_moves(board_t board, vector_t *moves[NUM_DOTS]) {
+void get_moves(board_t board, moves_t moves) {
 
     /* Append all the single dots moves. */
     int point;
-    if (moves[0] == NULL) {
-        moves[0] = vector_new();
-    }
     for (point = 0; point < NUM_DOTS; point++) {
-        vector_append(moves[0], singleset(point));
+        moves_add(moves, 1, singleset(point));
     }
 
     /* A lookup table to prevent duplicate paths. This is based
@@ -341,25 +355,21 @@ int main() {
     //randomize_board(board);
     print_board(board);
 
-    vector_t *moves[NUM_DOTS] = {NULL};
+    moves_t moves;
+    memset(&moves, 0, sizeof(moves));
     get_moves(board, moves);
 
     int i, j, count = 0;
     for (i = 0; i < NUM_DOTS + 1; i++) {
-        if (moves[i] != NULL) {
+        if (moves[i].length > 0) {
             printf("Score: %d\n", i + 1);
-            for (j = 0; j < moves[i]->length; j++) {
-                count++;
-                //print_bitmask(moves[i]->items[j], GREEN, RED);
+            for (j = 0; j < moves[i].length; j++, count++) {
+                print_bitmask(moves[i].items[j], GREEN, RED);
             }
         }
     }
 
-    for (i = 0; i < NUM_DOTS; i++) {
-        if (moves[i] != NULL) {
-            vector_free(moves[i]);
-        }
-    }
+    moves_free(moves);
 
     printf("Total moves: %d\n", count);
 

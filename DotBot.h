@@ -67,6 +67,7 @@ typedef struct {
    int degree[NUM_DOTS];
 } adjacency_t;
 
+typedef vector_t moves_t[NUM_DOTS];
 
 /* Select a random dot, that is not equal to `exclude`. */
 int random_dot(color_t exclude);
@@ -91,19 +92,6 @@ void compute_translation(board_t board, cache_t cache, int col, int perm);
 
 /* Shrink a dot, and make the dots above it fall into place. */
 void shrink_column(int column[NUM_ROWS], int row);
-
-/* Compute all of the partitions connected partitions of a bitmask.
- * The results are place in `partitions` as a sparse array, where all
- * non-zero entries are a bitmask of the partition that includes that
- * position.
- */
-void get_partitions(SET mask, SET partitions[NUM_DOTS]);
-
-/* Build a partition starting at point by performing a flood fill. This
- * destructively modifies the mask by removing elements from it as
- * it adds them to the partition.
- */
-SET build_partition(SET *mask, int point);
 
 /* ANSI color codes for drawing the dots. */
 int color_codes[5] = { 31, 32, 33, 35, 36 };
