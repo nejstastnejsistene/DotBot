@@ -38,25 +38,24 @@ SET get_color_mask(color_t board[NUM_DOTS], color_t color) {
 }
 
 
-/* Construct the board resulting from applying `mask` to `board`.
+/* Construct the board resulting from applying `move` to `board`.
  * The resulting board is placed in `result`, which also includes
  * how many points the move is worth.
  */
 void get_translation(
-        board_t *board, cache_t cache, SET mask, translation_t *result) {
+        board_t *board, cache_t cache, SET move, translation_t *result) {
 
-    if (mask & CYCLE_FLAG) {
-        color_t color = mask >> 37;
-        mask |= get_encircled_dots(mask);
-        mask |= board->color_masks[color];
+    if (element(CYCLE_FLAG, move)) {
+        color_t color = move >> COLOR_SHIFT;
+        move = board->color_masks[color] | get_encircled_dots(move);
     }
 
     result->score = 0;
 
     int col, col_mask;
     int *dest, *src;
-    for (col = 0; col < NUM_COLS; col++, mask >>= NUM_COLS) {
-        col_mask = mask & COL_MASK;
+    for (col = 0; col < NUM_COLS; col++, move >>= NUM_COLS) {
+        col_mask = move & COL_MASK;
 
         /* Compute the translation if its not in the cache. */
         if (!cache[col][col_mask].valid) {
@@ -307,7 +306,8 @@ int get_cycles(moves_t moves, SET partition, color_t color, SET color_mask) {
                         value = cardinality(result);
                         if (!moves_contains(seen, value, result)) {
                             moves_add(seen, value, result);
-                            moves_add(moves, value, cycle | CYCLE_FLAG | (SET)color << 37);
+                            moves_add(moves, value,
+                                    ENCODE_CYCLE(cycle, color));
                             count++;
                         }
                     }
@@ -320,7 +320,7 @@ int get_cycles(moves_t moves, SET partition, color_t color, SET color_mask) {
         cycle = SQUARES[i];
         if (MATCHES(cycle, partition)) {
             value = cardinality(color_mask);
-            moves_add(moves, value, cycle | CYCLE_FLAG | (SET)color << 37);
+            moves_add(moves, value, ENCODE_CYCLE(cycle, color));
             count++;
             break;
         }
@@ -449,7 +449,9 @@ void print_adjacency_matrix(adjacency_t *adj) {
 
 
 int main() {
-    srand(time(NULL));
+    time_t seed = time(NULL);
+    printf("Seed: %d\n", (int)seed);
+    srand(seed);
 
     board_t board;
     memset(&board, 0, sizeof(board));
@@ -468,7 +470,6 @@ int main() {
     moves_t moves;
     memset(&moves, 0, sizeof(moves));
     get_moves(&board, moves);
-    printf("%d moves\n", moves->length);
 
     SET move = choose_move(&board, cache, moves, 1);
 

@@ -17,8 +17,11 @@
 #define NUM_PERMUTATIONS 64 /* 2^6 */
 #define COL_MASK 0x3f       /* 0b111111 */
 
-#define CYCLE_FLAG singleset(NUM_DOTS)
 #define MATCHES(p, mask) (((p) & (mask)) == (p))
+#define CYCLE_FLAG NUM_DOTS
+#define COLOR_SHIFT (NUM_DOTS + 1)
+#define ENCODE_CYCLE(path, color) \
+    (add(path, CYCLE_FLAG) | ((SET)(color) << COLOR_SHIFT))
 
 /* Each color is represented by a number in [0,5), and -1 means empty. */
 typedef enum {
