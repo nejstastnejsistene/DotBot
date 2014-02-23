@@ -103,6 +103,26 @@ void get_partitions(SET mask, vector_t *partitions);
 */
 SET build_partition(SET *mask, int point);
 
+void get_adjacency_matrix(SET mask, adjacency_t *adj);
+int is_adjacent(int a, int b);
+
+void moves_free(moves_t moves);
+void moves_add(moves_t moves, int value, SET move);
+int moves_contains(moves_t moves, int value, SET set);
+
+void get_moves(board_t board, moves_t moves);
+int get_cycles(moves_t moves, SET partition, SET color_mask);
+int get_encircled_dots(SET x);
+void depth_first_search(
+        moves_t moves,
+        int visited[NUM_DOTS][NUM_DOTS],
+        int start,
+        adjacency_t *adj,
+        SET partition,
+        SET path,
+        int length,
+        int point);
+
 /* ANSI color codes for drawing the dots. */
 int color_codes[5] = { 31, 32, 33, 35, 36 };
 

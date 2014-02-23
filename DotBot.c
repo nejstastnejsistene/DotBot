@@ -165,23 +165,6 @@ SET build_partition(SET *mask, int point) {
 }
 
 
-int is_adjacent(int a, int b) {
-    if (b < a) {
-        int tmp = a; 
-        a = b;
-        b = tmp;
-    }
-    switch (b-a) {
-        case 1:
-            return COL(a) == COL(b);
-        case 6:
-            return 1;
-        default:
-            return 0;
-    }
-}
-
-
 /* Compute an adjacency matrix for a bitmask. */
 void get_adjacency_matrix(SET mask, adjacency_t *adj) {
     int i, j;
@@ -199,34 +182,23 @@ void get_adjacency_matrix(SET mask, adjacency_t *adj) {
     }
 }
 
-int get_encircled_dots(SET x) {
-    int r, c;
-    for (r = 0; r < NUM_ROWS; r++) {
-        c = 0;
-        while (!element(POINT(r, c), x)) {
-            x = add(x, POINT(r, c));
-            c++;
-        }
-        c = NUM_COLS - 1;
-        while (!element(POINT(r, c), x)) {
-            x = add(x, POINT(r, c));
-            c--;
-        }
+
+int is_adjacent(int a, int b) {
+    if (b < a) {
+        int tmp = a; 
+        a = b;
+        b = tmp;
     }
-    for (c = 0; c < NUM_COLS; c++) {
-        r = 0;
-        while (!element(POINT(r, c), x)) {
-            x = add(x, POINT(r, c));
-            r++;
-        }
-        r = NUM_ROWS - 1;
-        while (!element(POINT(r, c), x)) {
-            x = add(x, POINT(r, c));
-            r--;
-        }
+    switch (b-a) {
+        case 1:
+            return COL(a) == COL(b);
+        case 6:
+            return 1;
+        default:
+            return 0;
     }
-    return (~x) & first_set_of_n_elements(NUM_ROWS * NUM_COLS);
 }
+
 
 void moves_free(moves_t moves) {
     int i;
@@ -237,6 +209,7 @@ void moves_free(moves_t moves) {
     }
 }
 
+
 void moves_add(moves_t moves, int value, SET move) {
     if (moves[value - 1].bufsize == 0) {
         vector_init(&moves[value - 1]);
@@ -244,9 +217,51 @@ void moves_add(moves_t moves, int value, SET move) {
     vector_append(&moves[value - 1], move);
 }
 
+
 int moves_contains(moves_t moves, int value, SET set) {
     return vector_contains(&moves[value - 1], set);
 }
+
+
+void get_moves(board_t board, moves_t moves) {
+
+    /* A lookup table to prevent duplicate paths. This is based
+     * on the assumption that all paths can be uniquely identified
+     * by their start and end points.
+     */
+    int visited[NUM_DOTS][NUM_DOTS] = {{0}};
+
+    adjacency_t adj;
+    memset(&adj, 0, sizeof(adj));
+
+    vector_t partitions;
+    vector_init(&partitions);
+
+    color_t color;
+    for (color = 0; color < NUM_COLORS; color++) {
+        SET color_mask = get_color_mask(board, color);
+        get_adjacency_matrix(color_mask, &adj);
+        get_partitions(color_mask, &partitions);
+
+        int i;
+        for (i = 0; i < partitions.length; i++)  {
+            if (!get_cycles(moves, partitions.items[i], color_mask)) {
+
+                /* Perform a DFS on each node with a degree of 1 or less. */
+                int point;
+                for (point = 0; point < NUM_DOTS; point++) {
+                    if (adj.degree[point] < 2) {
+                        depth_first_search(moves, visited, point, &adj,
+                                partitions.items[i], emptyset, 0, point);
+                    }
+                }
+            }
+        }
+        vector_reset(&partitions);
+    }
+    vector_free(&partitions);
+}
+
 
 int get_cycles(moves_t moves, SET partition, SET color_mask) {
     int num_dots = cardinality(partition);
@@ -287,6 +302,64 @@ int get_cycles(moves_t moves, SET partition, SET color_mask) {
         }
     }
     return count;
+}
+
+
+int get_encircled_dots(SET x) {
+    int r, c;
+    for (r = 0; r < NUM_ROWS; r++) {
+        c = 0;
+        while (!element(POINT(r, c), x)) {
+            x = add(x, POINT(r, c));
+            c++;
+        }
+        c = NUM_COLS - 1;
+        while (!element(POINT(r, c), x)) {
+            x = add(x, POINT(r, c));
+            c--;
+        }
+    }
+    for (c = 0; c < NUM_COLS; c++) {
+        r = 0;
+        while (!element(POINT(r, c), x)) {
+            x = add(x, POINT(r, c));
+            r++;
+        }
+        r = NUM_ROWS - 1;
+        while (!element(POINT(r, c), x)) {
+            x = add(x, POINT(r, c));
+            r--;
+        }
+    }
+    return (~x) & first_set_of_n_elements(NUM_ROWS * NUM_COLS);
+}
+
+
+void depth_first_search(
+        moves_t moves,
+        int visited[NUM_DOTS][NUM_DOTS],
+        int start,
+        adjacency_t *adj,
+        SET partition,
+        SET path,
+        int length,
+        int point) {
+    partition = remove(partition, point);
+    path = add(path, point);
+    length++;
+    if (!visited[start][point]) {
+        visited[start][point] = 1;
+        visited[point][start] = 1;
+        moves_add(moves, length, path);
+    }
+    int i, neighbor;
+    for (i = 0; i < adj->degree[point]; i++) {
+        neighbor = adj->neighbors[point][i];
+        if (element(neighbor, partition)) {
+            depth_first_search(moves, visited,
+                    start, adj, partition, path, length, neighbor);
+        }
+    }
 }
 
 
@@ -348,74 +421,6 @@ void print_adjacency_matrix(adjacency_t *adj) {
         printf("\n");
     }
     printf("\n");
-}
-
-
-void depth_first_search(
-        moves_t moves,
-        int visited[NUM_DOTS][NUM_DOTS],
-        int start,
-        adjacency_t *adj,
-        SET partition,
-        SET path,
-        int length,
-        int point) {
-    partition = remove(partition, point);
-    path = add(path, point);
-    length++;
-    if (!visited[start][point]) {
-        visited[start][point] = 1;
-        visited[point][start] = 1;
-        moves_add(moves, length, path);
-    }
-    int i, neighbor;
-    for (i = 0; i < adj->degree[point]; i++) {
-        neighbor = adj->neighbors[point][i];
-        if (element(neighbor, partition)) {
-            depth_first_search(moves, visited,
-                    start, adj, partition, path, length, neighbor);
-        }
-    }
-}
-
-
-void get_moves(board_t board, moves_t moves) {
-
-    /* A lookup table to prevent duplicate paths. This is based
-     * on the assumption that all paths can be uniquely identified
-     * by their start and end points.
-     */
-    int visited[NUM_DOTS][NUM_DOTS] = {{0}};
-
-    adjacency_t adj;
-    memset(&adj, 0, sizeof(adj));
-
-    vector_t partitions;
-    vector_init(&partitions);
-
-    color_t color;
-    for (color = 0; color < NUM_COLORS; color++) {
-        SET color_mask = get_color_mask(board, color);
-        get_adjacency_matrix(color_mask, &adj);
-        get_partitions(color_mask, &partitions);
-
-        int i;
-        for (i = 0; i < partitions.length; i++)  {
-            if (!get_cycles(moves, partitions.items[i], color_mask)) {
-
-                /* Perform a DFS on each node with a degree of 1 or less. */
-                int point;
-                for (point = 0; point < NUM_DOTS; point++) {
-                    if (adj.degree[point] < 2) {
-                        depth_first_search(moves, visited, point, &adj,
-                                partitions.items[i], emptyset, 0, point);
-                    }
-                }
-            }
-        }
-        vector_reset(&partitions);
-    }
-    vector_free(&partitions);
 }
 
 
