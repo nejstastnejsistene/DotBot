@@ -253,7 +253,7 @@ SET choose_move(board_t *board, cache_t cache, int moves_remaining) {
 }
 
 
-#define SEED 0
+#define SEED -1
 #define MAX_DEPTH 4
 #define CUTOFF (NUM_DOTS / 2)
 #define DECAY 0.5
@@ -523,7 +523,10 @@ void fill_empty_dots(color_t board[NUM_DOTS], int exclude) {
 
 
 int main() {
-    time_t seed = SEED;//time(NULL);
+    time_t seed = SEED;
+    if (seed < 0) {
+        seed = time(NULL);
+    }
     printf("Seed: %d\n", (int)seed);
     srand(seed);
 
