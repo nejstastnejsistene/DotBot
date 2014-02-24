@@ -247,7 +247,6 @@ SET choose_move(board_t *board, cache_t cache) {
     move_t result;
     memset(&result, 0, sizeof(result));
     _choose_move(board, cache, moves, &result, 1);
-    printf("Weight: %f\n", result.weight);
 
     moves_free(moves);
 
@@ -501,6 +500,16 @@ void print_adjacency_matrix(adjacency_t *adj) {
 }
 
 
+void fill_empty_dots(color_t board[NUM_DOTS], int exclude) {
+    int point;
+    for (point = 0; point < NUM_DOTS; point++) {
+        if (board[point] == EMPTY) {
+            board[point] = random_dot(exclude);
+        }
+    }
+}
+
+
 int main() {
     time_t seed = time(NULL);
     printf("Seed: %d\n", (int)seed);
@@ -508,29 +517,38 @@ int main() {
 
     board_t board;
     randomize_board(board.board);
-    board_init(&board);
     print_board(board.board);
 
     cache_t cache;
-    memset(&cache, 0, sizeof(cache));
 
-    SET move = choose_move(&board, cache);
+    int x, score = 0;
+    for (x = 0; x < 35; x++) {
+        board_init(&board);
+        memset(&cache, 0, sizeof(cache));
 
-    color_t color = EMPTY;
-    int i;
-    for (i = 0; i < NUM_DOTS; i++) {
-        if (element(i, move)) {
-            color = board.board[i];
-            break;
+        SET move = choose_move(&board, cache);
+
+        color_t color = EMPTY;
+        int i;
+        for (i = 0; i < NUM_DOTS; i++) {
+            if (element(i, move)) {
+                color = board.board[i];
+                break;
+            }
         }
+
+        translation_t result;
+        get_translation(&board, cache, move, &result);
+        score += result.score;
+        printf("Moves remaining: %d, Score: %d\n", 34 - x, score);
+        print_bitmask(move, EMPTY, color);
+
+        fill_empty_dots(result.board,
+                element(CYCLE_FLAG, move) ? color : EMPTY);
+
+        memcpy(board.board, result.board, sizeof(result.board));
+        print_board(board.board);
     }
-
-    translation_t result;
-    get_translation(&board, cache, move, &result);
-
-    printf("Score: %d\n", result.score);
-    print_bitmask(move, EMPTY, color);
-    print_board(result.board);
 
     return 0;
 }
