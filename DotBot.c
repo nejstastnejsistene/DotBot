@@ -239,14 +239,14 @@ int moves_contains(moves_t moves, int value, SET set) {
 }
 
 
-SET choose_move(board_t *board, cache_t cache) {
+SET choose_move(board_t *board, cache_t cache, int moves_remaining) {
     moves_t moves;
     memset(&moves, 0, sizeof(moves));
     get_moves(board, moves, 0);
 
     move_t result;
     memset(&result, 0, sizeof(result));
-    _choose_move(board, cache, moves, &result, 1);
+    _choose_move(board, cache, moves, &result, 1, moves_remaining);
 
     moves_free(moves);
 
@@ -257,7 +257,7 @@ SET choose_move(board_t *board, cache_t cache) {
 #define MAX_DEPTH 4
 
 void _choose_move(board_t *board, cache_t cache,
-        moves_t moves, move_t *best, int depth) {
+        moves_t moves, move_t *best, int depth, int moves_remaining) {
 
     translation_t future;
     int i, j;
@@ -267,7 +267,7 @@ void _choose_move(board_t *board, cache_t cache,
 
             float weight = future.score;
 
-            if (depth < MAX_DEPTH) {
+            if (depth < moves_remaining && depth < MAX_DEPTH) {
                 board_t new_board;
                 memcpy(&new_board.board,
                         future.board, sizeof(future.board));
@@ -283,7 +283,7 @@ void _choose_move(board_t *board, cache_t cache,
                 move_t result;
                 memset(&result, 0, sizeof(result));
                 _choose_move(&new_board,
-                        new_cache, new_moves, &result, depth + 1);
+                        new_cache, new_moves, &result, depth + 1, moves_remaining);
 
                 weight += 0.5 * result.weight;
 
@@ -526,7 +526,7 @@ int main() {
         board_init(&board);
         memset(&cache, 0, sizeof(cache));
 
-        SET move = choose_move(&board, cache);
+        SET move = choose_move(&board, cache, 35 - x);
 
         color_t color = EMPTY;
         int i;
@@ -540,7 +540,7 @@ int main() {
         translation_t result;
         get_translation(&board, cache, move, &result);
         score += result.score;
-        printf("Moves remaining: %d, Score: %d\n", 34 - x, score);
+        printf("Moves remaining: %d, Score: %d\n", 35 - x - 1, score);
         print_bitmask(move, EMPTY, color);
 
         fill_empty_dots(result.board,

@@ -122,8 +122,8 @@ void moves_free(moves_t moves);
 void moves_add(moves_t moves, int value, SET move);
 int moves_contains(moves_t moves, int value, SET set);
 
-SET choose_move(board_t *board, cache_t cache);
-void _choose_move(board_t *board, cache_t cache, moves_t moves, move_t *result, int depth);
+SET choose_move(board_t *board, cache_t cache, int moves_remaining);
+void _choose_move(board_t *board, cache_t cache, moves_t moves, move_t *result, int depth, int moves_remaining);
 
 void get_moves(board_t *board, moves_t moves, int depth);
 int get_cycles(moves_t moves, SET partition, color_t color, SET color_mask);
