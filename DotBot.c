@@ -7,11 +7,19 @@
 #include "cycles.h"
 
 
+#define MAX_DEPTH 4
+#define CUTOFF (NUM_DOTS / 2)
+#define DECAY 0.5
+#define CYCLE_WEIGHT (1 / DECAY)
+
+#define SEED -1
+unsigned int seed;
+
 /* Select a random dot, that is not equal to `exclude`. */
 color_t random_dot(color_t exclude) {
-    color_t dot = rand() % NUM_COLORS;
+    color_t dot = rand_r(&seed) % NUM_COLORS;
     while (dot == exclude) {
-        dot = rand() % NUM_COLORS;
+        dot = rand_r(&seed) % NUM_COLORS;
     }
     return dot;
 }
@@ -253,11 +261,6 @@ SET choose_move(board_t *board, cache_t cache, int moves_remaining) {
 }
 
 
-#define SEED -1
-#define MAX_DEPTH 4
-#define CUTOFF (NUM_DOTS / 2)
-#define DECAY 0.5
-
 void _choose_move(board_t *board, cache_t cache,
         moves_t moves, move_t *best, int depth, int moves_remaining, int num_empty) {
 
@@ -273,6 +276,10 @@ void _choose_move(board_t *board, cache_t cache,
 
             float weight = future.score;
             int deepest = depth;
+
+            if (element(CYCLE_FLAG, moves[i].items[j])) {
+                weight *= CYCLE_WEIGHT;
+            }
 
             if (num_empty < CUTOFF && depth < moves_remaining && depth < MAX_DEPTH) {
                 board_t new_board;
@@ -528,6 +535,7 @@ int play_round() {
     cache_t cache;
 
     randomize_board(board.board);
+    printf("Seed: %x\n", seed);
     print_board(board.board);
 
     int turn, score = 0;
@@ -559,6 +567,7 @@ int play_round() {
         }
         print_bitmask(move, EMPTY, color);
         printf("Moves remaining: %d, Score: %d\n", 35 - turn - 1, score);
+        printf("Seed: 0x%x\n", seed);
         print_board(result.board);
 #endif
 
@@ -570,13 +579,7 @@ int play_round() {
 
 
 int main() {
-    time_t seed = SEED;
-    if (seed < 0) {
-        seed = time(NULL);
-    }
-    printf("Seed: %d\n", (int)seed);
-    srand(seed);
-
+    seed = (SEED < 0) ? time(NULL) : SEED;
     int score = play_round();
     printf("Final score: %d\n", score);
     return 0;
