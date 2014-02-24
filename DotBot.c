@@ -245,8 +245,7 @@ SET choose_move(board_t *board, cache_t cache, int moves_remaining) {
     get_moves(board, moves, 0);
 
     move_t result;
-    memset(&result, 0, sizeof(result));
-    _choose_move(board, cache, moves, &result, 1, moves_remaining);
+    _choose_move(board, cache, moves, &result, 1, moves_remaining, 0);
 
     moves_free(moves);
 
@@ -254,10 +253,17 @@ SET choose_move(board_t *board, cache_t cache, int moves_remaining) {
 }
 
 
+#define SEED 0
 #define MAX_DEPTH 4
+#define CUTOFF (NUM_DOTS / 2)
+#define DECAY 0.5
 
 void _choose_move(board_t *board, cache_t cache,
-        moves_t moves, move_t *best, int depth, int moves_remaining) {
+        moves_t moves, move_t *best, int depth, int moves_remaining, int num_empty) {
+
+    best->weight = 0;
+    best->depth = depth;
+    best->path = emptyset;
 
     translation_t future;
     int i, j;
@@ -266,8 +272,9 @@ void _choose_move(board_t *board, cache_t cache,
             get_translation(board, cache, moves[i].items[j], &future);
 
             float weight = future.score;
+            int deepest = depth;
 
-            if (depth < moves_remaining && depth < MAX_DEPTH) {
+            if (num_empty < CUTOFF && depth < moves_remaining && depth < MAX_DEPTH) {
                 board_t new_board;
                 memcpy(&new_board.board,
                         future.board, sizeof(future.board));
@@ -281,17 +288,22 @@ void _choose_move(board_t *board, cache_t cache,
                 get_moves(&new_board, new_moves, depth);
 
                 move_t result;
-                memset(&result, 0, sizeof(result));
-                _choose_move(&new_board,
-                        new_cache, new_moves, &result, depth + 1, moves_remaining);
+                _choose_move(&new_board, new_cache, new_moves, &result,
+                        depth + 1, moves_remaining, num_empty + future.score);
 
-                weight += 0.5 * result.weight;
+                weight += DECAY * result.weight;
+                deepest = result.depth;
 
                 moves_free(new_moves);
             }
 
+            if (depth == 1) {
+                weight /= deepest;
+            }
+
             if (weight > best->weight) {
                 best->weight = weight;
+                best->depth = deepest;
                 best->path = moves[i].items[j];
             }
         }
@@ -511,7 +523,7 @@ void fill_empty_dots(color_t board[NUM_DOTS], int exclude) {
 
 
 int main() {
-    time_t seed = time(NULL);
+    time_t seed = SEED;//time(NULL);
     printf("Seed: %d\n", (int)seed);
     srand(seed);
 
