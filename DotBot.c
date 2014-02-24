@@ -521,6 +521,53 @@ void fill_empty_dots(color_t board[NUM_DOTS], int exclude) {
     }
 }
 
+#define DEBUG
+
+int play_round() {
+    board_t board;
+    cache_t cache;
+
+    randomize_board(board.board);
+    print_board(board.board);
+
+    int turn, score = 0;
+    for (turn = 0; turn < 35; turn++) {
+        board_init(&board);
+        memset(&cache, 0, sizeof(cache));
+
+        SET move = choose_move(&board, cache, 35 - turn);
+
+        translation_t result;
+        get_translation(&board, cache, move, &result);
+
+        score += result.score;
+
+        color_t color = EMPTY;
+        if (element(CYCLE_FLAG, move)) {
+            color = move >> COLOR_SHIFT;
+        }
+        fill_empty_dots(result.board, color);
+
+#ifdef DEBUG
+        color = EMPTY;
+        int i;
+        for (i = 0; i < NUM_DOTS; i++) {
+            if (element(i, move)) {
+                color = board.board[i];
+                break;
+            }
+        }
+        print_bitmask(move, EMPTY, color);
+        printf("Moves remaining: %d, Score: %d\n", 35 - turn - 1, score);
+        print_board(result.board);
+#endif
+
+        memcpy(board.board, result.board, sizeof(result.board));
+    }
+
+    return score;
+}
+
 
 int main() {
     time_t seed = SEED;
@@ -530,40 +577,7 @@ int main() {
     printf("Seed: %d\n", (int)seed);
     srand(seed);
 
-    board_t board;
-    randomize_board(board.board);
-    print_board(board.board);
-
-    cache_t cache;
-
-    int x, score = 0;
-    for (x = 0; x < 35; x++) {
-        board_init(&board);
-        memset(&cache, 0, sizeof(cache));
-
-        SET move = choose_move(&board, cache, 35 - x);
-
-        color_t color = EMPTY;
-        int i;
-        for (i = 0; i < NUM_DOTS; i++) {
-            if (element(i, move)) {
-                color = board.board[i];
-                break;
-            }
-        }
-
-        translation_t result;
-        get_translation(&board, cache, move, &result);
-        score += result.score;
-        printf("Moves remaining: %d, Score: %d\n", 35 - x - 1, score);
-        print_bitmask(move, EMPTY, color);
-
-        fill_empty_dots(result.board,
-                element(CYCLE_FLAG, move) ? color : EMPTY);
-
-        memcpy(board.board, result.board, sizeof(result.board));
-        print_board(board.board);
-    }
-
+    int score = play_round();
+    printf("Final score: %d\n", score);
     return 0;
 }
