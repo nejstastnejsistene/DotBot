@@ -239,27 +239,68 @@ int moves_contains(moves_t moves, int value, SET set) {
 }
 
 
-SET choose_move(board_t *board, cache_t cache, moves_t moves, int depth) {
-    int max_value = 0;
-    SET max_path = emptyset;
+SET choose_move(board_t *board, cache_t cache) {
+    moves_t moves;
+    memset(&moves, 0, sizeof(moves));
+    get_moves(board, moves, 0);
 
-    translation_t result;
-    int i, j;
-    for (i = 0; i < NUM_DOTS ; i++) {
-        for (j = 0; j < moves[i].length; j++) {
-            get_translation(board, cache, moves[i].items[j], &result);
-            if (result.score > max_value) {
-                max_value = result.score;
-                max_path = moves[i].items[j];
-            }
-        }
-    }
+    move_t result;
+    memset(&result, 0, sizeof(result));
+    _choose_move(board, cache, moves, &result, 1);
+    printf("Weight: %f\n", result.weight);
 
-    return max_path;
+    moves_free(moves);
+
+    return result.path;
 }
 
 
-void get_moves(board_t *board, moves_t moves) {
+#define MAX_DEPTH 4
+
+void _choose_move(board_t *board, cache_t cache,
+        moves_t moves, move_t *best, int depth) {
+
+    translation_t future;
+    int i, j;
+    for (i = NUM_DOTS - 1; i >= 0; i--) {
+        for (j = 0; j < moves[i].length; j++) {
+            get_translation(board, cache, moves[i].items[j], &future);
+
+            float weight = future.score;
+
+            if (depth < MAX_DEPTH) {
+                board_t new_board;
+                memcpy(&new_board.board,
+                        future.board, sizeof(future.board));
+                board_init(&new_board);
+
+                cache_t new_cache;
+                memset(&new_cache, 0, sizeof(new_cache));
+
+                moves_t new_moves;
+                memset(&new_moves, 0, sizeof(new_moves));
+                get_moves(&new_board, new_moves, depth);
+
+                move_t result;
+                memset(&result, 0, sizeof(result));
+                _choose_move(&new_board,
+                        new_cache, new_moves, &result, depth + 1);
+
+                weight += 0.5 * result.weight;
+
+                moves_free(new_moves);
+            }
+
+            if (weight > best->weight) {
+                best->weight = weight;
+                best->path = moves[i].items[j];
+            }
+        }
+    }
+}
+
+
+void get_moves(board_t *board, moves_t moves, int depth) {
 
     /* A lookup table to prevent duplicate paths. This is based
      * on the assumption that all paths can be uniquely identified
@@ -285,7 +326,8 @@ void get_moves(board_t *board, moves_t moves) {
                     if (board->adj.degree[point] < 2) {
                         depth_first_search(
                                 moves, visited, point, &board->adj, 
-                                partitions.items[i], emptyset, 0, point);
+                                partitions.items[i], emptyset, 0, point,
+                                depth);
                     }
                 }
             }
@@ -377,11 +419,12 @@ void depth_first_search(
         SET partition,
         SET path,
         int length,
-        int point) {
+        int point,
+        int depth) {
     partition = remove(partition, point);
     path = add(path, point);
     length++;
-    if (!visited[start][point]) {
+    if (!visited[start][point] && (length != 1 || depth < 1)) {
         visited[start][point] = 1;
         visited[point][start] = 1;
         moves_add(moves, length, path);
@@ -391,7 +434,7 @@ void depth_first_search(
         neighbor = adj->neighbors[point][i];
         if (element(neighbor, partition)) {
             depth_first_search(moves, visited,
-                    start, adj, partition, path, length, neighbor);
+                    start, adj, partition, path, length, neighbor, depth);
         }
     }
 }
@@ -471,11 +514,7 @@ int main() {
     cache_t cache;
     memset(&cache, 0, sizeof(cache));
 
-    moves_t moves;
-    memset(&moves, 0, sizeof(moves));
-    get_moves(&board, moves);
-
-    SET move = choose_move(&board, cache, moves, 1);
+    SET move = choose_move(&board, cache);
 
     color_t color = EMPTY;
     int i;
@@ -492,7 +531,6 @@ int main() {
     printf("Score: %d\n", result.score);
     print_bitmask(move, EMPTY, color);
     print_board(result.board);
-    moves_free(moves);
 
     return 0;
 }

@@ -73,6 +73,12 @@ typedef struct {
     int score;
 } translation_t;
 
+typedef struct {
+    float weight;
+    int depth;
+    SET path;
+} move_t;
+
 typedef vector_t moves_t[NUM_DOTS];
 
 /* Select a random dot, that is not equal to `exclude`. */
@@ -116,7 +122,10 @@ void moves_free(moves_t moves);
 void moves_add(moves_t moves, int value, SET move);
 int moves_contains(moves_t moves, int value, SET set);
 
-void get_moves(board_t *board, moves_t moves);
+SET choose_move(board_t *board, cache_t cache);
+void _choose_move(board_t *board, cache_t cache, moves_t moves, move_t *result, int depth);
+
+void get_moves(board_t *board, moves_t moves, int depth);
 int get_cycles(moves_t moves, SET partition, color_t color, SET color_mask);
 int get_encircled_dots(SET x);
 void depth_first_search(
@@ -127,7 +136,8 @@ void depth_first_search(
         SET partition,
         SET path,
         int length,
-        int point);
+        int point,
+        int depth);
 
 /* ANSI color codes for drawing the dots. */
 int color_codes[5] = { 31, 32, 33, 35, 36 };
