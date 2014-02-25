@@ -1,5 +1,5 @@
-#ifndef DOTBOT_H
-#define DOTBOT_H
+#ifndef DOTS_H
+#define DOTS_H
 
 #include "set.h"
 #include "vector.h"
@@ -73,22 +73,39 @@ typedef struct {
     int score;
 } translation_t;
 
-typedef struct {
-    float weight;
-    int depth;
-    SET path;
-} move_t;
-
-typedef vector_t moves_t[NUM_DOTS];
-
-/* Select a random dot, that is not equal to `exclude`. */
-int random_dot(color_t exclude);
-
-/* Fill a board with random dots. */
-void randomize_board(color_t board[NUM_DOTS]);
+void board_init(board_t *board);
 
 /* Compute the bitmask for all dots in `board` of color `color`. */
 SET get_color_mask(color_t board[NUM_DOTS], color_t color);
+
+void update_adjacency_matrix(SET mask, adjacency_t *adj);
+int is_adjacent(int a, int b);
+
+void get_moves(board_t *board, vector_t *moves, int depth);
+
+/* Compute all of the partitions connected partitions of a bitmask. */
+void get_partitions(SET mask, vector_t *partitions);
+
+/* Build a partition starting at point by performing a flood fill. This
+* destructively modifies the mask by removing elements from it as
+* it adds them to the partition.
+*/
+SET build_partition(SET *mask, int point);
+
+
+int get_cycles(vector_t *moves, SET partition, color_t color, SET color_mask);
+int get_encircled_dots(SET x);
+
+void depth_first_search(
+        vector_t *moves,
+        int visited[NUM_DOTS][NUM_DOTS],
+        int start,
+        adjacency_t *adj,
+        SET partition,
+        SET path,
+        int length,
+        int point,
+        int depth);
 
 /* Construct the board resulting from applying `mask` to `board`.
  * The resulting board is placed in `result`, which also includes
@@ -105,47 +122,10 @@ void compute_translation(board_t *board, cache_t cache, int col, int perm);
 /* Shrink a dot, and make the dots above it fall into place. */
 void shrink_column(int column[NUM_ROWS], int row);
 
-/* Compute all of the partitions connected partitions of a bitmask. */
-void get_partitions(SET mask, vector_t *partitions);
-
-/* Build a partition starting at point by performing a flood fill. This
-* destructively modifies the mask by removing elements from it as
-* it adds them to the partition.
-*/
-SET build_partition(SET *mask, int point);
-
-void board_init(board_t *board);
-void update_adjacency_matrix(SET mask, adjacency_t *adj);
-int is_adjacent(int a, int b);
-
-void moves_free(moves_t moves);
-void moves_add(moves_t moves, int value, SET move);
-int moves_contains(moves_t moves, int value, SET set);
-
-SET choose_move(board_t *board, cache_t cache, int moves_remaining);
-void _choose_move(board_t *board, cache_t cache, moves_t moves, move_t *result, int depth, int moves_remaining, int num_empty);
-
-void get_moves(board_t *board, moves_t moves, int depth);
-int get_cycles(moves_t moves, SET partition, color_t color, SET color_mask);
-int get_encircled_dots(SET x);
-void depth_first_search(
-        moves_t moves,
-        int visited[NUM_DOTS][NUM_DOTS],
-        int start,
-        adjacency_t *adj,
-        SET partition,
-        SET path,
-        int length,
-        int point,
-        int depth);
-
-/* ANSI color codes for drawing the dots. */
-int color_codes[5] = { 31, 32, 33, 35, 36 };
-
 /* Print colorful UTF8 representations of a board. */
 void print_board(int *board);
 
 /* Print a colorful UTF8 representation of a bitmask. */
 void print_bitmask(SET mask, int fg, int bg);
 
-#endif // DOTBOT_H
+#endif // DOTS_H

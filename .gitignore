@@ -1,3 +1,4 @@
 env
+*.o
 DotBot
 find_cycles
