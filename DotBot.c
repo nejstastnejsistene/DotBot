@@ -7,13 +7,12 @@
 #include "cycles.h"
 
 
-#define MAX_DEPTH 4
+#define MAX_DEPTH 3
 #define CUTOFF (NUM_DOTS / 2)
 #define DECAY 0.5
 #define CYCLE_WEIGHT (1 / DECAY)
 
-#define SEED -1
-unsigned int seed;
+static unsigned int seed;
 
 /* Select a random dot, that is not equal to `exclude`. */
 color_t random_dot(color_t exclude) {
@@ -528,14 +527,15 @@ void fill_empty_dots(color_t board[NUM_DOTS], int exclude) {
     }
 }
 
-#define DEBUG
+//#define DEBUG
 
 int play_round() {
     board_t board;
     cache_t cache;
 
+    printf("Seed: %u\n", seed);
+
     randomize_board(board.board);
-    printf("Seed: %x\n", seed);
     print_board(board.board);
 
     int turn, score = 0;
@@ -567,7 +567,7 @@ int play_round() {
         }
         print_bitmask(move, EMPTY, color);
         printf("Moves remaining: %d, Score: %d\n", 35 - turn - 1, score);
-        printf("Seed: 0x%x\n", seed);
+        printf("Seed: %u\n", seed);
         print_board(result.board);
 #endif
 
@@ -578,8 +578,12 @@ int play_round() {
 }
 
 
-int main() {
-    seed = (SEED < 0) ? time(NULL) : SEED;
+int main(int argc, char **argv) {
+    if (argc > 1) {
+        seed = atoi(argv[1]);
+    } else {
+        seed = time(NULL);
+    }
     int score = play_round();
     printf("Final score: %d\n", score);
     return 0;
