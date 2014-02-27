@@ -1,140 +1,117 @@
 #include <stdlib.h>
-#include <stdint.h>
 #include <stdio.h>
 
-#include "set.h"
+#include "dots.h"
 
 
-static SET THE_ROW = emptyset;
-static SET THE_COL = (1ULL << NUM_ROWS) - 1;
-
-#define PERIMETER   (2 * (NUM_ROWS + NUM_COLS - 2))
-
-#define INDEX(r, c)     (NUM_ROWS * (c) + (r))
-#define SQUARE(r, c)    ((3ULL | 3ULL << NUM_ROWS) << INDEX(r, c))
-#define MATCHES(p, x)   (((p) & (x)) == (p))
-
-#define ROW(r)          (THE_ROW << (r))
-#define COL(c)          (THE_COL << (NUM_ROWS * (c)))
-#define UP(x, r, c)     ((r) != 0           && ((x) & ROW((r) - 1) & COL(c)))
-#define DOWN(x, r, c)   ((r) + 1 < NUM_ROWS && ((x) & ROW((r) + 1) & COL(c)))
-#define LEFT(x, r, c)   ((c) != 0           && ((x) & ROW(r) & COL((c) - 1)))
-#define RIGHT(x, r, c)  ((c) + 1 < NUM_COLS && ((x) & ROW(r) & COL((c) + 1)))
+static int num_rows, num_cols;
 
 
-void draw(SET x) {
-    int r, c;
-    for (r = 0; r < NUM_ROWS; r++) {
-        for (c = 0; c < NUM_COLS; c++) {
-            if ((x >> INDEX(r, c)) & 1) {
-                printf("* ");
-            } else {
-                printf("  ");
-            }
-        }
-        printf("\n");
-    }
-    printf("\n");
-}
+void build_candidate_cycles(vector_t *cycles, int col, SET cycle, int prev_start, int prev_end) {
+    if (col == num_cols) {
+        vector_append(cycles, cycle);
+    } else {
+        int start, end, row;
+        for (start = 0; start < num_rows - 2; start++) {
+            for (end = start + 2; end < num_rows; end++) {
+                SET new_cycle = cycle;
+                new_cycle = add(new_cycle, POINT(start, col));
+                new_cycle = add(new_cycle, POINT(end,   col));
 
+                if (col == 0 || col == num_cols - 1) {
+                    for (row = start + 1; row < end; row++) {
+                        new_cycle = add(new_cycle, POINT(row, col));
+                    }
+                } 
 
-SET get_square(SET x) {
-    int r, c;
-    SET sq;
-    for (r = 0; r < NUM_ROWS - 1; r++) {
-        for (c = 0; c < NUM_COLS - 1; c++) {
-            sq = SQUARE(r, c);
-            if (MATCHES(sq, x)) {
-                return sq;
+                if (col > 0) {
+                    for (row = start + 1; row < prev_start + 1; row++) {
+                        new_cycle = add(new_cycle, POINT(row, col));
+                    }
+                    for (row = prev_start + 1; row < start + 1; row++) {
+                        new_cycle = add(new_cycle, POINT(row, col - 1));
+                    }
+                    for (row = prev_end; row < end; row++) {
+                        new_cycle = add(new_cycle, POINT(row, col));
+                    }
+                    for (row = end; row < prev_end; row++) {
+                        new_cycle = add(new_cycle, POINT(row, col - 1));
+                    }
+                }
+
+                build_candidate_cycles(cycles, col + 1, new_cycle, start, end);
             }
         }
     }
-    return emptyset;
 }
 
+int is_valid_cycle(SET cycle) {
 
-int is_valid_cycle(SET x) {
-    int r, c, neighbors;
-    for (r = 0; r < NUM_ROWS; r++) {
-        for (c = 0; c < NUM_COLS; c++) {
-            if (x & ROW(r) & COL(c)) {
+    /* The number of dots in the cycle should be equal to the
+     * number of dots in the perimeter.
+     */
+    if (cardinality(cycle) != PERIMETER(num_rows, num_cols)) {
+        return 0;
+    }
+
+    /* Eliminate cycles that contain squares. */
+    SET square = 3ULL | (3ULL << NUM_ROWS);
+    int row, col;
+    for (col = 0; col < num_cols - 1; col++) {
+        for (row = 0; row < num_rows - 1; row++) {
+            if (MATCHES(square << POINT(row, col), cycle)) {
+                return 0;
+            }
+        }
+    }
+
+    /* Check that every point has at least two neighbors. */
+    int neighbors;
+    for (col = 0; col < num_cols; col++) {
+        for (row = 0; row < num_rows; row++) {
+            if (element(POINT(row, col), cycle)) {
                 neighbors = 0;
-                if (UP(x, r, c)) neighbors++;
-                if (DOWN(x, r, c)) neighbors++;
-                if (LEFT(x, r, c)) neighbors++;
-                if (RIGHT(x, r, c)) neighbors++;
-                if (neighbors != 2) {
+                if (col > 0 && element(POINT(row, col - 1), cycle))
+                    neighbors++;
+                if (col < num_cols - 1 && element(POINT(row, col + 1), cycle))
+                    neighbors++;
+                if (row > 0 && element(POINT(row - 1, col), cycle))
+                    neighbors++;
+                if (row < num_rows - 1 && element(POINT(row + 1, col), cycle))
+                    neighbors++;
+                if (neighbors < 2) {
                     return 0;
                 }
             }
         }
     }
+
     return 1;
 }
 
 
-SET to_6x6(SET x) {
-    SET y = emptyset;
-    int c;
-    SET col;
-    for (c = 0; c < NUM_COLS; c++) {
-        col = (x & COL(c)) >> (c * NUM_ROWS);
-        y |= col << (6 * c);
+int main(int argc, char **argv) {
+    if (argc != 3) {
+        fprintf(stderr, "usage: find_cycles <num_rows> <num_cols>\n");
+        exit(1);
     }
-    return y;
-}
+    num_rows = atoi(argv[1]);
+    num_cols = atoi(argv[2]);
 
+    vector_t cycles;
+    vector_init(&cycles);
 
-int count_encircled_dots(SET x) {
-    int r, c;
-    for (r = 0; r < NUM_ROWS; r++) {
-        c = 0;
-        while (!element(INDEX(r, c), x)) {
-            x = add(x, INDEX(r, c));
-            c++;
-        }
-        c = NUM_COLS - 1;
-        while (!element(INDEX(r, c), x)) {
-            x = add(x, INDEX(r, c));
-            c--;
+    build_candidate_cycles(&cycles, 0, emptyset, -1, -1);
+
+    int i, count = 0;
+    for (i = 0; i < cycles.length; i++) {
+        if (is_valid_cycle(cycles.items[i])) {
+            printf("%llx\n", cycles.items[i]);
+            print_bitmask(cycles.items[i], EMPTY, BLUE);
+            count++;
         }
     }
-    for (c = 0; c < NUM_COLS; c++) {
-        r = 0;
-        while (!element(INDEX(r, c), x)) {
-            x = add(x, INDEX(r, c));
-            r++;
-        }
-        r = NUM_ROWS - 1;
-        while (!element(INDEX(r, c), x)) {
-            x = add(x, INDEX(r, c));
-            r--;
-        }
-    }
-    SET mask = first_set_of_n_elements(NUM_ROWS * NUM_COLS);
-    return cardinality((~x) & mask);
-}
-
-
-int main() {
-    int i;
-    for (i = 0; i < NUM_COLS; i++) {
-        THE_ROW |= (1ULL << (NUM_ROWS * i));
-    }
-
-    SET x, max;
-    x = first_set_of_n_elements(PERIMETER);
-    x <<= NUM_ROWS * (NUM_COLS - 1) + 2 - PERIMETER;
-    max = 1ULL << (NUM_COLS * NUM_ROWS);
-
-    printf("%d\n", PERIMETER);
-
-    while (x < max) {
-        if (!get_square(x) && is_valid_cycle(x)) {
-            printf("0x%llx %d\n", to_6x6(x), count_encircled_dots(x));
-        }
-        x = next_set_of_n_elements(x);
-    }
+    printf("Num cycles: %d\n", count);
 
     return 0;
 }

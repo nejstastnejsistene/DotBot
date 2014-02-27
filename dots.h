@@ -18,6 +18,7 @@
 #define COL_MASK 0x3f       /* 0b111111 */
 
 #define MATCHES(p, mask) (((p) & (mask)) == (p))
+#define PERIMETER(rows, cols) (2 * ((rows) + (cols)) - 4)
 #define CYCLE_FLAG NUM_DOTS
 #define COLOR_SHIFT (NUM_DOTS + 1)
 #define ENCODE_CYCLE(path, color) \
