@@ -82,8 +82,6 @@ SET get_color_mask(color_t board[NUM_DOTS], color_t color);
 void update_adjacency_matrix(SET mask, adjacency_t *adj);
 int is_adjacent(int a, int b);
 
-void get_moves(board_t *board, vector_t *moves, int depth);
-
 /* Compute all of the partitions connected partitions of a bitmask. */
 void get_partitions(SET mask, vector_t *partitions);
 
@@ -92,11 +90,6 @@ void get_partitions(SET mask, vector_t *partitions);
 * it adds them to the partition.
 */
 SET build_partition(SET *mask, int point);
-
-
-int get_cycles(vector_t *moves, SET partition, color_t color, SET color_mask);
-void get_convex_hull(SET mask, int *r0, int *c0, int *r1, int *c1);
-int get_encircled_dots(SET x);
 
 void depth_first_search(
         vector_t *moves,
@@ -123,6 +116,8 @@ void compute_translation(board_t *board, cache_t cache, int col, int perm);
 
 /* Shrink a dot, and make the dots above it fall into place. */
 void shrink_column(int column[NUM_ROWS], int row);
+
+int get_encircled_dots(SET x);
 
 /* Print colorful UTF8 representations of a board. */
 void print_board(int *board);

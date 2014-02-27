@@ -2,7 +2,6 @@
 #include <string.h>
 
 #include "dots.h"
-#include "cycles.h"
 
 
 void board_init(board_t *board) {
@@ -60,44 +59,6 @@ int is_adjacent(int a, int b) {
         default:
             return 0;
     }
-}
-
-
-void get_moves(board_t *board, vector_t *moves, int depth) {
-
-    /* A lookup table to prevent duplicate paths. This is based
-     * on the assumption that all paths can be uniquely identified
-     * by their start and end points.
-     */
-    int visited[NUM_DOTS][NUM_DOTS] = {{0}};
-
-    vector_t partitions;
-    vector_init(&partitions);
-
-    color_t color;
-    for (color = 0; color < NUM_COLORS; color++) {
-        SET color_mask = board->color_masks[color];
-        get_partitions(color_mask, &partitions);
-
-        int i;
-        for (i = 0; i < partitions.length; i++)  {
-            if (!get_cycles(moves, partitions.items[i], color, color_mask)) {
-
-                /* Perform a DFS on each node with a degree of 1 or less. */
-                int point;
-                for (point = 0; point < NUM_DOTS; point++) {
-                    if (board->adj.degree[point] < 2) {
-                        depth_first_search(
-                                moves, visited, point, &board->adj, 
-                                partitions.items[i], emptyset, 0, point,
-                                depth);
-                    }
-                }
-            }
-        }
-        vector_reset(&partitions);
-    }
-    vector_free(&partitions);
 }
 
 
@@ -161,106 +122,6 @@ SET build_partition(SET *mask, int point) {
     }
 
     return partition;
-}
-
-
-int get_cycles(vector_t *moves, SET partition, color_t color, SET color_mask) {
-    int num_dots = cardinality(partition);
-    if (num_dots < 4) {
-        return 0;
-    }
-    vector_t seen;
-    vector_init(&seen);
-    int count = 0;
-    SET cycle, result;
-
-    int r0, c0, r1, c1;
-    get_convex_hull(partition, &r0, &c0, &r1, &c1);
-
-    int rows, cols, i, row, col;
-    for (rows = 3; rows < r1 - c0 + 1; rows++) {
-        for (cols = 3; cols < c1 - c0 + 1; cols++) {
-            for (i = 0; i < NUM_CYCLES(rows, cols); i++) {
-                for (row = r0; row < r1 - rows + 2; row++) {
-                    for (col = c0; col < c1 - cols + 2; col++) {
-                        cycle = CYCLES(rows, cols)[i] << POINT(row, col);
-                        if (MATCHES(cycle, partition)) {
-                            result = color_mask | get_encircled_dots(cycle);
-                            if (!vector_contains(&seen, result)) {
-                                vector_append(&seen, result);
-                                vector_append(moves, ENCODE_CYCLE(cycle, color));
-                                count++;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    vector_free(&seen);
-
-    for (row = r0; row < r1; row++) {
-        for (col = c0; col < c1; col++) {
-            cycle = SQUARE << POINT(row, col);
-            if (MATCHES(cycle, partition)) {
-                vector_append(moves, ENCODE_CYCLE(cycle, color));
-                count++;
-                break;
-            }
-        }
-    }
-
-    return count;
-}
-
-
-void get_convex_hull(SET mask, int *r0, int *c0, int *r1, int *c1) {
-    *r0 = NUM_ROWS;
-    *c0 = NUM_COLS;
-    *r1 = 0;
-    *c1 = 0;
-    int row, col;
-    for (row = 0; row < NUM_ROWS; row++) {
-        for (col = 0; col < NUM_COLS; col++) {
-            if (element(POINT(row, col), mask)) {
-                if (row < *r0) *r0 = row;
-                if (row > *r1) *r1 = row;
-                if (col < *c0) *c0 = col;
-                if (col > *c1) *c1 = col;
-            }
-        }
-    }
-}
-
-
-int get_encircled_dots(SET x) {
-    int r, c;
-    for (r = 0; r < NUM_ROWS; r++) {
-        c = 0;
-        while (!element(POINT(r, c), x)) {
-            x = add(x, POINT(r, c));
-            c++;
-        }
-        c = NUM_COLS - 1;
-        while (!element(POINT(r, c), x)) {
-            x = add(x, POINT(r, c));
-            c--;
-        }
-    }
-    for (c = 0; c < NUM_COLS; c++) {
-        r = 0;
-        while (!element(POINT(r, c), x)) {
-            x = add(x, POINT(r, c));
-            r++;
-        }
-        r = NUM_ROWS - 1;
-        while (!element(POINT(r, c), x)) {
-            x = add(x, POINT(r, c));
-            r--;
-        }
-    }
-    return (~x) & first_set_of_n_elements(NUM_ROWS * NUM_COLS);
 }
 
 
@@ -362,6 +223,37 @@ void shrink_column(column_t column, int row) {
     }
     column[0] = EMPTY;
 }
+
+
+int get_encircled_dots(SET x) {
+    int r, c;
+    for (r = 0; r < NUM_ROWS; r++) {
+        c = 0;
+        while (!element(POINT(r, c), x)) {
+            x = add(x, POINT(r, c));
+            c++;
+        }
+        c = NUM_COLS - 1;
+        while (!element(POINT(r, c), x)) {
+            x = add(x, POINT(r, c));
+            c--;
+        }
+    }
+    for (c = 0; c < NUM_COLS; c++) {
+        r = 0;
+        while (!element(POINT(r, c), x)) {
+            x = add(x, POINT(r, c));
+            r++;
+        }
+        r = NUM_ROWS - 1;
+        while (!element(POINT(r, c), x)) {
+            x = add(x, POINT(r, c));
+            r--;
+        }
+    }
+    return (~x) & first_set_of_n_elements(NUM_ROWS * NUM_COLS);
+}
+
 
 /* ANSI color codes for drawing the dots. */
 static int color_codes[5] = { 31, 32, 33, 35, 36 };

@@ -1,4 +1,4 @@
-env
+cycles.h
 *.o
 DotBot
 find_cycles

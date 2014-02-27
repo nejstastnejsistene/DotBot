@@ -16,6 +16,43 @@ typedef struct {
     SET path;
 } move_t;
 
+void get_moves(board_t *board, vector_t *moves, int depth) {
+
+    /* A lookup table to prevent duplicate paths. This is based
+     * on the assumption that all paths can be uniquely identified
+     * by their start and end points.
+     */
+    int visited[NUM_DOTS][NUM_DOTS] = {{0}};
+
+    vector_t partitions;
+    vector_init(&partitions);
+
+    color_t color;
+    for (color = 0; color < NUM_COLORS; color++) {
+        SET color_mask = board->color_masks[color];
+        get_partitions(color_mask, &partitions);
+
+        int i;
+        for (i = 0; i < partitions.length; i++)  {
+            if (!get_cycles(moves, partitions.items[i], color, color_mask)) {
+
+                /* Perform a DFS on each node with a degree of 1 or less. */
+                int point;
+                for (point = 0; point < NUM_DOTS; point++) {
+                    if (board->adj.degree[point] < 2) {
+                        depth_first_search(
+                                moves, visited, point, &board->adj, 
+                                partitions.items[i], emptyset, 0, point,
+                                depth);
+                    }
+                }
+            }
+        }
+        vector_reset(&partitions);
+    }
+    vector_free(&partitions);
+}
+
 void _choose_move(board_t *board, cache_t cache,
         vector_t *moves, move_t *best, int depth, int moves_remaining, int num_empty);
 
