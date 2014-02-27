@@ -3,7 +3,7 @@
 
 #include "dots.h"
 
-static unsigned int seed;
+unsigned int seed;
 
 /* Select a random dot, that is not equal to `exclude`. */
 color_t random_dot(color_t exclude);

@@ -91,27 +91,22 @@ int is_valid_cycle(SET cycle) {
 
 
 int main(int argc, char **argv) {
-    if (argc != 3) {
-        fprintf(stderr, "usage: find_cycles <num_rows> <num_cols>\n");
-        exit(1);
-    }
-    num_rows = atoi(argv[1]);
-    num_cols = atoi(argv[2]);
+    for (num_rows = 3; num_rows <= 6; num_rows++) {
+        for (num_cols = 3; num_cols <= 6; num_cols++) {
+            vector_t cycles;
+            vector_init(&cycles);
 
-    vector_t cycles;
-    vector_init(&cycles);
+            build_candidate_cycles(&cycles, 0, emptyset, -1, -1);
+            int i;
+            for (i = 0; i < cycles.length; i++) {
+                if (is_valid_cycle(cycles.items[i])) {
+                    printf("%d,%d,", num_rows, num_cols);
+                    printf("0x%llx\n", cycles.items[i]);
+                }
+            }
 
-    build_candidate_cycles(&cycles, 0, emptyset, -1, -1);
-
-    int i, count = 0;
-    for (i = 0; i < cycles.length; i++) {
-        if (is_valid_cycle(cycles.items[i])) {
-            printf("%llx\n", cycles.items[i]);
-            print_bitmask(cycles.items[i], EMPTY, BLUE);
-            count++;
+            vector_free(&cycles);
         }
     }
-    printf("Num cycles: %d\n", count);
-
     return 0;
 }
