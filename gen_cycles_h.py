@@ -3,7 +3,7 @@ from collections import defaultdict
 from commands import getoutput
 
 cycles = defaultdict(lambda: [])
-for line in getoutput('./find_cycles').split('\n'):
+for line in getoutput('bin/find_cycles').split('\n'):
     num_rows, num_cols, cycle = map(eval, line.split(','))
     cycles[num_rows, num_cols].append(cycle)
 

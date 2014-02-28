@@ -1,8 +1,9 @@
 CC=gcc
 CFLAGS=-c -g -O3 -Wall
 
-DotBot: DotBot.c emu.o dots.o cycles.o vector.o set.o
-	$(CC) -o DotBot DotBot.c emu.o dots.o cycles.o vector.o set.o
+bin/DotBot: DotBot.c emu.o dots.o cycles.o vector.o set.o
+	mkdir -p bin
+	$(CC) -o bin/DotBot DotBot.c emu.o dots.o cycles.o vector.o set.o
 
 emu.o: emu.c emu.h
 	$(CC) $(CFLAGS) emu.c
@@ -19,11 +20,12 @@ vector.o: vector.c vector.h
 set.o: set.c set.h
 	$(CC) $(CFLAGS) set.c
 
-cycles.h: gen_cycles_h.py find_cycles
+cycles.h: bin/find_cycles gen_cycles_h.py
 	python gen_cycles_h.py
 
-find_cycles: find_cycles.c vector.o set.o
-	$(CC) -o find_cycles find_cycles.c vector.o set.o
+bin/find_cycles: find_cycles.c vector.o set.o
+	mkdir -p bin
+	$(CC) -o bin/find_cycles find_cycles.c vector.o set.o
 
 clean:
-	rm -rf cycles.h *.o DotBot find_cycles
+	rm -rf cycles.h *.o bin
