@@ -1,31 +1,39 @@
-CC=gcc
-CFLAGS=-c -g -O3 -Wall
+CC = gcc
+CFLAGS = -c -g -O3 -Wall
 
-bin/DotBot: DotBot.c emu.o dots.o cycles.o vector.o set.o
-	mkdir -p bin
-	$(CC) -o bin/DotBot DotBot.c emu.o dots.o cycles.o vector.o set.o
+MKDIR = mkdir -p
+PYTHON = python
 
-emu.o: emu.c emu.h
-	$(CC) $(CFLAGS) emu.c
+SRC = src
+BIN = bin
 
-dots.o: dots.c dots.h cycles.h
-	$(CC) $(CFLAGS) dots.c
+$(BIN)/DotBot: $(SRC)/DotBot.c emu.o dots.o cycles.o vector.o set.o
+	$(MKDIR) $(BIN)
+	$(CC) -o $@ $^
 
-cycles.o: cycles.c cycles.h
-	$(CC) $(CFLAGS) cycles.c
+emu.o: $(SRC)/emu.c $(SRC)/emu.h
+	$(CC) $(CFLAGS) $<
 
-vector.o: vector.c vector.h
-	$(CC) $(CFLAGS) vector.c
+dots.o: $(SRC)/dots.c $(SRC)/dots.h $(SRC)/cycles.h
+	$(CC) $(CFLAGS) $<
 
-set.o: set.c set.h
-	$(CC) $(CFLAGS) set.c
+cycles.o: $(SRC)/cycles.c $(SRC)/cycles.h
+	$(CC) $(CFLAGS) $<
 
-cycles.h: bin/find_cycles gen_cycles_h.py
-	python gen_cycles_h.py
+vector.o: $(SRC)/vector.c $(SRC)/vector.h
+	$(CC) $(CFLAGS) $<
 
-bin/find_cycles: find_cycles.c vector.o set.o
-	mkdir -p bin
-	$(CC) -o bin/find_cycles find_cycles.c vector.o set.o
+set.o: $(SRC)/set.c $(SRC)/set.h
+	$(CC) $(CFLAGS) $<
+
+$(SRC)/cycles.h: gen_cycles_h.py $(BIN)/find_cycles
+	$(PYTHON) $<
+
+$(BIN)/find_cycles: $(SRC)/find_cycles.c vector.o set.o
+	$(MKDIR) $(BIN)
+	$(CC) -o $@ $^
 
 clean:
-	rm -rf cycles.h *.o bin
+	rm -rf $(SRC)/cycles.h *.o $(BIN)
+
+.PHONY: clean
