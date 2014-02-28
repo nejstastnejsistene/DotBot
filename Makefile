@@ -27,7 +27,7 @@ set.o: $(SRC)/set.c $(SRC)/set.h
 	$(CC) $(CFLAGS) $<
 
 $(SRC)/cycles.h: gen_cycles_h.py $(BIN)/find_cycles
-	$(PYTHON) $<
+	$(BIN)/find_cycles | $(PYTHON) $< > $@
 
 $(BIN)/find_cycles: $(SRC)/find_cycles.c vector.o set.o
 	$(MKDIR) $(BIN)
