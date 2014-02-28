@@ -34,8 +34,6 @@ void update_adjacency_matrix(SET mask, adjacency_t *adj) {
         if ((mask >> i) & 1) {
             for (j = i; j < NUM_DOTS; j++) {
                 if (((mask >> j) & 1) && is_adjacent(i, j)) {
-                    adj->matrix[i][j] = 1;
-                    adj->matrix[j][i] = 1;
                     adj->neighbors[i][adj->degree[i]++] = j;
                     adj->neighbors[j][adj->degree[j]++] = i;
                 } 

@@ -39,7 +39,6 @@ typedef enum {
  * of the neighbors and the degree of each node.
  */
 typedef struct {
-   int matrix[NUM_DOTS][NUM_DOTS];
    int neighbors[NUM_DOTS][4];
    int degree[NUM_DOTS];
 } adjacency_t;
