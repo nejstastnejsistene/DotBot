@@ -175,9 +175,60 @@ int play_round() {
 }
 
 
+void get_path(board_t *board, SET move, vector_t *path) {
+    if (element(CYCLE_FLAG, move)) {
+        printf("not implemented!\n");
+        exit(1);
+    } else {
+        int pos;
+        for (pos = 0; pos < NUM_DOTS; pos++) {
+            if (element(pos, move) && board->adj.degree[pos] == 1) {
+                break;
+            }
+        }
+        int i;
+        do {
+            vector_append(path, pos);
+            move = remove(move, pos);
+            for (i = 0; i < board->adj.degree[pos]; i++) {
+                if (element(board->adj.neighbors[pos][i], move)) {
+                    pos = board->adj.neighbors[pos][i];
+                    break;
+                }
+            }
+        } while (move);
+    }
+}
+
+
 int main(int argc, char **argv) {
     if (argc > 1) {
-        seed = atoi(argv[1]);
+        if (strcmp(argv[1], "-") == 0) {
+            board_t board;
+
+            int i;
+            for (i = 0; i < NUM_DOTS; i++) {
+                fscanf(stdin, "%d", board.board + i);
+            }
+            board_init(&board);
+
+            cache_t cache;
+            memset(&cache, 0, sizeof(cache));
+
+            SET move = choose_move(&board, cache, 35);
+
+            vector_t path;
+            vector_init(&path);
+            get_path(&board, move, &path);
+            for (i = 0; i < path.length; i++) {
+                printf("%d,%d\n", ROW((int)path.items[i]),
+                                  COL((int)path.items[i]));
+            }
+            vector_free(&path);
+            return 0;
+        } else {
+            seed = atoi(argv[1]);
+        }
     } else {
         seed = time(NULL);
     }

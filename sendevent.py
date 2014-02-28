@@ -68,12 +68,11 @@ class RERANScript(object):
     def __str__(self):
         return '{}\n'.format(len(self.events)) + ''.join(self.events)
 
+import sys
+
 script = RERANScript()
-script.gesture([
-    get_coord(2, 1),
-    get_coord(2, 2),
-    get_coord(1, 2),
-    get_coord(1, 3)])
+script.gesture(
+        [get_coord(*map(int, line.split(','))) for line in sys.stdin])
 
 import tempfile
 from commands import getoutput
