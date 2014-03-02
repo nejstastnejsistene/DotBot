@@ -1,21 +1,20 @@
-c1r1 = 0xd7, 0x20d
-c1r2 = 0xd7, 0x2a8
-dist = c1r2[1] - c1r1[1]
+from evdev.ecodes import *
+
+#240 613
+#240 792
 
 def get_coord(row, col):
-    return c1r1[0] + col * dist, c1r1[1] + row * dist
+    return 240 + 179 * col, 613 + 179 * row
 
-sleep_time = int(0.01 * 1e9)
-reran_path = '/data/local/replay'
-script_path = '/data/local/events.txt'
+sleep_time = int(0.0025 * 1e9)
+reran_path = '/data/local/DotBot/replay'
+script_path = '/data/local/DotBot/events.txt'
 
 class RERANScript(object):
 
     def __init__(self, device=0):
         self.device = device
         self.events = []
-        self.x = None
-        self.y = None
 
     def event(self, type, code, value):
         fmt = '{}\n{},{},{},{}\n'
@@ -23,25 +22,23 @@ class RERANScript(object):
         self.events.append(output)
 
     def setpos(self, x, y, finger_down=False):
-        if x != self.x:
-            self.event(3, 0, x)
-        if y != self.y:
-            self.event(3, 1, y)
+        self.event(EV_ABS, ABS_X, x)
+        self.event(EV_ABS, ABS_Y, y)
         if finger_down:
             self.finger_down()
         else:
             self.seperator()
 
     def finger_down(self):
-        self.event(1, 330, 1)
+        self.event(EV_KEY, BTN_TOUCH, 1)
         self.seperator()
 
     def finger_up(self):
-        self.event(1, 330, 0)
+        self.event(EV_KEY, BTN_TOUCH, 0)
         self.seperator()
 
     def seperator(self):
-        self.event(0, 0, 0)
+        self.event(EV_SYN, SYN_REPORT, 0)
 
     def click(self, x, y):
         self.setpos(x, y, True)
@@ -56,30 +53,51 @@ class RERANScript(object):
                             last_y + i * (y - last_y) / n)
             self.setpos(x, y)
             last_x, last_y = x, y
-        #self.finger_up()
-
-        for x, y in coords[::-1][:]:
-            for i in range(n):
-                self.setpos(last_x + i * (x - last_x) / n,
-                            last_y + i * (y - last_y) / n)
-            self.setpos(x, y)
-            last_x, last_y = x, y
+        self.finger_up()
 
     def __str__(self):
         return '{}\n'.format(len(self.events)) + ''.join(self.events)
 
+
+class RERANScriptMT(RERANScript):
+
+    def __init__(self):
+        RERANScript.__init__(self)
+        self.tracking_id = 0;
+
+    def setpos(self, x, y, finger_down=False):
+        if finger_down:
+            self.finger_down()
+        self.event(EV_ABS, ABS_MT_POSITION_X, x)
+        self.event(EV_ABS, ABS_MT_POSITION_Y, y)
+        self.seperator()
+
+    def finger_down(self):
+        self.event(EV_ABS, ABS_MT_TRACKING_ID, self.tracking_id)
+        self.tracking_id += 1
+        #self.seperator()
+
+    def finger_up(self):
+        self.event(EV_ABS, ABS_MT_TRACKING_ID, -1)
+        self.seperator()
+
+    def seperator(self):
+        self.event(EV_SYN, SYN_REPORT, 0)
+
 import sys
 
-script = RERANScript()
+script = RERANScriptMT()
 script.gesture(
-        [get_coord(*map(int, line.split(','))) for line in sys.stdin])
+        [get_coord(*map(int, line.split())) for line in sys.stdin])
 
 import tempfile
-from commands import getoutput
+import subprocess
+
+def call(*args):
+    assert subprocess.call(args) == 0
 
 with tempfile.NamedTemporaryFile() as tmp:
-    print script
     tmp.write(str(script))
     tmp.flush()
-    print getoutput('adb push {} {}'.format(tmp.name, script_path))
-print getoutput('adb shell {} {}'.format(reran_path, script_path))
+    call('adb', 'push', tmp.name, script_path)
+    call('adb', 'shell', reran_path, script_path)

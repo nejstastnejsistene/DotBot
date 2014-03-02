@@ -221,7 +221,7 @@ int main(int argc, char **argv) {
             vector_init(&path);
             get_path(&board, move, &path);
             for (i = 0; i < path.length; i++) {
-                printf("%d,%d\n", ROW((int)path.items[i]),
+                printf("%d %d\n", ROW((int)path.items[i]),
                                   COL((int)path.items[i]));
             }
             vector_free(&path);

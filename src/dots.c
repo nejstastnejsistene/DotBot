@@ -254,7 +254,7 @@ int get_encircled_dots(SET x) {
 
 
 /* ANSI color codes for drawing the dots. */
-static int color_codes[5] = { 31, 32, 33, 35, 36 };
+static int color_codes[5] = { 31, 33, 32, 36, 35 };
 
 
 /* Print a colorful UTF8 representation of a board. */
