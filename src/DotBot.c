@@ -175,31 +175,30 @@ int play_round() {
 }
 
 
+/*
 void get_path(board_t *board, SET move, vector_t *path) {
-    if (element(CYCLE_FLAG, move)) {
-        printf("not implemented!\n");
-        exit(1);
-    } else {
-        int pos;
-        for (pos = 0; pos < NUM_DOTS; pos++) {
-            if (element(pos, move) && board->adj.degree[pos] == 1) {
-                break;
-            }
+    int pos;
+    for (pos = 0; pos < NUM_DOTS; pos++) {
+        if (element(pos, move) && board->adj.degree[pos] <= 1) {
+            return _get_path(board, move, path, pos);
         }
-        int i;
-        do {
-            vector_append(path, pos);
-            move = remove(move, pos);
-            for (i = 0; i < board->adj.degree[pos]; i++) {
-                if (element(board->adj.neighbors[pos][i], move)) {
-                    pos = board->adj.neighbors[pos][i];
-                    break;
-                }
-            }
-        } while (move);
     }
 }
 
+void _get_path(board_t *board, SET move, vector_t *path, int pos) {
+    int i;
+    do {
+        vector_append(path, pos);
+        move = remove(move, pos);
+        for (i = 0; i < board->adj.degree[pos]; i++) {
+            if (element(board->adj.neighbors[pos][i], move)) {
+                pos = board->adj.neighbors[pos][i];
+                break;
+            }
+        }
+    } while (move);
+}
+*/
 
 int main(int argc, char **argv) {
     if (argc > 1) {
@@ -216,8 +215,8 @@ int main(int argc, char **argv) {
             memset(&cache, 0, sizeof(cache));
 
             SET move = choose_move(&board, cache, 35);
-
-            vector_t path;
+            printf("%d 0x%llx\n", element(CYCLE_FLAG, move) ? 1 : 0, move);
+    /*        vector_t path;
             vector_init(&path);
             get_path(&board, move, &path);
             for (i = 0; i < path.length; i++) {
@@ -225,6 +224,7 @@ int main(int argc, char **argv) {
                                   COL((int)path.items[i]));
             }
             vector_free(&path);
+            */
             return 0;
         } else {
             seed = atoi(argv[1]);

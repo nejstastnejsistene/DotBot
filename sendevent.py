@@ -86,9 +86,14 @@ class RERANScriptMT(RERANScript):
 
 import sys
 
+coords = [get_coord(*map(int, line.split())) for line in sys.stdin]
+
 script = RERANScriptMT()
-script.gesture(
-        [get_coord(*map(int, line.split())) for line in sys.stdin])
+if len(coords) == 1:
+    script.click(*coords[0])
+    script.click(*coords[0])
+else:
+    script.gesture(coords)
 
 import tempfile
 import subprocess
