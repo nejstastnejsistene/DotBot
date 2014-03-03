@@ -34,6 +34,6 @@ $(BIN)/find_cycles: $(SRC)/find_cycles.c vector.o set.o
 	$(CC) -o $@ $^
 
 clean:
-	rm -rf $(SRC)/cycles.h *.o $(BIN)
+	rm -rf $(SRC)/cycles.h *.o $(BIN) dotbot/*.pyc
 
 .PHONY: clean

@@ -1,4 +1,4 @@
 src/cycles.h
 *.o
 bin
-screenshot.png
+*.pyc

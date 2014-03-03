@@ -1,14 +1,8 @@
 from evdev.ecodes import *
 
-#240 613
-#240 792
-
-def get_coord(row, col):
-    return 240 + 179 * col, 613 + 179 * row
 
 sleep_time = int(0.0025 * 1e9)
-reran_path = '/data/local/DotBot/replay'
-script_path = '/data/local/DotBot/events.txt'
+
 
 class RERANScript(object):
 
@@ -84,25 +78,21 @@ class RERANScriptMT(RERANScript):
     def seperator(self):
         self.event(EV_SYN, SYN_REPORT, 0)
 
-import sys
+if False:
+    import sys
 
-coords = [get_coord(*map(int, line.split())) for line in sys.stdin]
+    coords = [get_coord(*map(int, line.split())) for line in sys.stdin]
 
-script = RERANScriptMT()
-if len(coords) == 1:
-    script.click(*coords[0])
-    script.click(*coords[0])
-else:
-    script.gesture(coords)
+    script = RERANScriptMT()
+    if len(coords) == 1:
+        script.click(*coords[0])
+        script.click(*coords[0])
+    else:
+        script.gesture(coords)
 
-import tempfile
-import subprocess
+    import tempfile
+    import subprocess
 
-def call(*args):
-    assert subprocess.call(args) == 0
+    def call(*args):
+        assert subprocess.call(args) == 0
 
-with tempfile.NamedTemporaryFile() as tmp:
-    tmp.write(str(script))
-    tmp.flush()
-    call('adb', 'push', tmp.name, script_path)
-    call('adb', 'shell', reran_path, script_path)
