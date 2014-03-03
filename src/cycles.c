@@ -34,6 +34,11 @@ int get_cycles(vector_t *moves, SET partition, color_t color, SET color_mask) {
     for (rows = 3; rows < r1 - c0 + 1; rows++) {
         for (cols = 3; cols < c1 - c0 + 1; cols++) {
 
+            /* Skip cyles that we don't have enough dots to form. */
+            if (num_dots < PERIMETER(rows, cols)) {
+                continue;
+            }
+
             /* Iterate through each cycle for the given dimension. */
             for (i = 0; i < NUM_CYCLES(rows, cols); i++) {
 
