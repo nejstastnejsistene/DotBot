@@ -19,7 +19,7 @@ print '#include "vector.h"'
 print
 print '#define SQUARE (3ULL | (3ULL << NUM_ROWS))'
 print
-print '#define CYCLE_INDEX(row, col) (4 * ((row) - 3) + (col))'
+print '#define CYCLE_INDEX(row, col) (4 * ((row) - 3) + (col) - 3)'
 print '#define NUM_CYCLES(row, col) num_cycles[CYCLE_INDEX(row, col)]'
 print '#define     CYCLES(row, col)     cycles[CYCLE_INDEX(row, col)]'
 print
