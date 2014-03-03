@@ -8,6 +8,6 @@ if isinstance(screen, dotbot.screenreader.GameScreen):
         script.click(*path[0])
         script.click(*path[0])
     else:
-        script.gesture(path)
+        script.gesture(dotbot.reran.interpolate(path))
     dotbot.sendevents(script)
 

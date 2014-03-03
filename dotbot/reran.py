@@ -1,7 +1,8 @@
+import contextlib
 from evdev.ecodes import *
 
 
-sleep_time = int(0.0025 * 1e9)
+default_sleep_time = int(0.0025 * 1e9)
 
 
 class RERANScript(object):
@@ -10,89 +11,79 @@ class RERANScript(object):
         self.device = device
         self.events = []
 
-    def event(self, type, code, value):
+    def event(self, type, code, value, sleep_time=default_sleep_time):
         fmt = '{}\n{},{},{},{}\n'
         output = fmt.format(sleep_time, self.device, type, code, value)
         self.events.append(output)
 
-    def setpos(self, x, y, finger_down=False):
+    def __str__(self):
+        return '{}\n'.format(len(self.events)) + ''.join(self.events)
+
+    @contextlib.contextmanager
+    def user_action(self, x, y):
+        self.start_action(x, y)
+        yield
+        self.end_action()
+
+    @contextlib.contextmanager
+    def packet(self):
+        yield
+        self.sync()
+
+    def start_action(self, x, y):
+        with self.packet():
+            self.setpos(x, y)
+            self.event(EV_KEY, BTN_TOUCH, 1)
+
+    def end_action(self):
+        with self.packet():
+            self.event(EV_KEY, BTN_TOUCH, 0)
+
+    def setpos(self, x, y):
         self.event(EV_ABS, ABS_X, x)
         self.event(EV_ABS, ABS_Y, y)
-        if finger_down:
-            self.finger_down()
-        else:
-            self.seperator()
 
-    def finger_down(self):
-        self.event(EV_KEY, BTN_TOUCH, 1)
-        self.seperator()
-
-    def finger_up(self):
-        self.event(EV_KEY, BTN_TOUCH, 0)
-        self.seperator()
-
-    def seperator(self):
+    def sync(self):
         self.event(EV_SYN, SYN_REPORT, 0)
 
     def click(self, x, y):
-        self.setpos(x, y, True)
-        self.finger_up()
+        with self.user_action(x, y): pass
 
-    def gesture(self, coords, n=10):
-        last_x, last_y = coords[0]
-        self.setpos(last_x, last_y, True)
-        for x, y in coords[1:]:
-            for i in range(n):
-                self.setpos(last_x + i * (x - last_x) / n,
-                            last_y + i * (y - last_y) / n)
-            self.setpos(x, y)
-            last_x, last_y = x, y
-        self.finger_up()
-
-    def __str__(self):
-        return '{}\n'.format(len(self.events)) + ''.join(self.events)
+    def gesture(self, coords):
+        coords = iter(coords)
+        with self.user_action(*next(coords)):
+            for coord in coords:
+                with self.packet():
+                    self.setpos(*coord)
 
 
 class RERANScriptMT(RERANScript):
 
-    def __init__(self):
-        RERANScript.__init__(self)
-        self.tracking_id = 0;
+    def __init__(self, *args, **kwargs):
+        RERANScript.__init__(self, *args, **kwargs)
+        self.tracking_id = 0
 
-    def setpos(self, x, y, finger_down=False):
-        if finger_down:
-            self.finger_down()
+    def start_action(self, x, y):
+        with self.packet():
+            self.event(EV_ABS, ABS_MT_TRACKING_ID, self.tracking_id)
+            self.setpos(x, y)
+        self.tracking_id += 1
+
+    def end_action(self):
+        with self.packet():
+            self.event(EV_ABS, ABS_MT_TRACKING_ID, -1)
+
+    def setpos(self, x, y):
         self.event(EV_ABS, ABS_MT_POSITION_X, x)
         self.event(EV_ABS, ABS_MT_POSITION_Y, y)
-        self.seperator()
 
-    def finger_down(self):
-        self.event(EV_ABS, ABS_MT_TRACKING_ID, self.tracking_id)
-        self.tracking_id += 1
-        #self.seperator()
 
-    def finger_up(self):
-        self.event(EV_ABS, ABS_MT_TRACKING_ID, -1)
-        self.seperator()
-
-    def seperator(self):
-        self.event(EV_SYN, SYN_REPORT, 0)
-
-if False:
-    import sys
-
-    coords = [get_coord(*map(int, line.split())) for line in sys.stdin]
-
-    script = RERANScriptMT()
-    if len(coords) == 1:
-        script.click(*coords[0])
-        script.click(*coords[0])
-    else:
-        script.gesture(coords)
-
-    import tempfile
-    import subprocess
-
-    def call(*args):
-        assert subprocess.call(args) == 0
-
+def interpolate(coords, n=10):
+    coords = iter(coords)
+    last_x, last_y = next(coords)
+    yield last_x, last_y
+    for x, y in coords:
+        for i in range(1, n + 1):
+            yield (last_x + i * (x - last_x) / n,
+                   last_y + i * (y - last_y) / n)
+        last_x, last_y = x, y
