@@ -29,14 +29,18 @@ def readscreen():
         return screenreader.readscreen(filename)
 
 
-def DotBot(screen):
+def DotBot(x, y):
     p = Popen(['bin/DotBot', '-'], stdin=PIPE, stdout=PIPE, stderr=PIPE)
-    out, err = p.communicate(' '.join(map(str, screen.colors)))
+    out, err = p.communicate(x)
     retcode = p.wait()
     if retcode != 0:
         raise exception, err
+    from screenreader import scale_coord
+    w = 1200
+    h = 1920
+    coords = [scale_coord(w, h, *map(int, x.split())) for x in y.split('\n')]
     for r, c in paths.get_path(*map(eval, out.split())):
-        yield screen.coords[6 * c + r]
+        yield coords[6 * c + r]
 
 
 def sendevents(script):
@@ -44,4 +48,4 @@ def sendevents(script):
         tmp.write(str(script))
         tmp.flush()
         call(['adb', 'push', tmp.name, script_path])
-        call(['adb', 'shell', reran_path, script_path])
+        call(['adb', 'shell', reran_path, script_path], stdout=open('/dev/null'))
