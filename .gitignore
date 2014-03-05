@@ -2,3 +2,4 @@ src/cycles.h
 *.o
 bin
 *.pyc
+*.plist
