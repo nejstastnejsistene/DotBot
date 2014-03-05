@@ -3,6 +3,7 @@ from evdev.ecodes import *
 
 
 default_sleep_time = int(0.0025 * 1e9)
+long_sleep_time = 100 * default_sleep_time
 
 
 class RERANScript(object):
@@ -37,7 +38,7 @@ class RERANScript(object):
 
     def end_action(self):
         with self.packet():
-            self.event(EV_KEY, BTN_TOUCH, 0)
+            self.event(EV_KEY, BTN_TOUCH, 0, long_sleep_time)
 
     def setpos(self, x, y):
         self.event(EV_ABS, ABS_X, x)
@@ -71,7 +72,7 @@ class RERANScriptMT(RERANScript):
 
     def end_action(self):
         with self.packet():
-            self.event(EV_ABS, ABS_MT_TRACKING_ID, -1)
+            self.event(EV_ABS, ABS_MT_TRACKING_ID, -1, long_sleep_time)
 
     def setpos(self, x, y):
         self.event(EV_ABS, ABS_MT_POSITION_X, x)
