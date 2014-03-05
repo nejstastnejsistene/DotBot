@@ -3,3 +3,4 @@ src/cycles.h
 bin
 *.pyc
 *.plist
+.coords

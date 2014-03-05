@@ -9,16 +9,18 @@ import screenreader
 
 
 remote_dir = '/data/local/DotBot/'
-screenshot_path = remote_dir + 'screenshot.png'
+screenshot_path = remote_dir + 'screenshot.raw'
 reran_path      = remote_dir + 'replay'
 script_path     = remote_dir + 'events.txt'
 
 
 @contextlib.contextmanager
 def screenshot():
-    call(['adb', 'shell', 'screencap', '-p', screenshot_path])
+    call(['adb', 'shell', 'screencap', screenshot_path])
+    call(['adb', 'shell', 'gzip', screenshot_path])
     with tempfile.NamedTemporaryFile() as tmp:
-        call(['adb', 'pull', screenshot_path, tmp.name])
+        call(['adb', 'pull', screenshot_path + '.gz', tmp.name + '.gz'])
+        call(['gunzip', '-f', tmp.name + '.gz'])
         yield tmp.name
 
 

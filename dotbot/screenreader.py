@@ -14,11 +14,26 @@ class ScreenReadingException(Exception):
 
 class GameScreen(object):
     def __init__(self, px, w, h):
-        self.colors, self.coords = zip(*get_grid(px, w, h))
+        import os
+        if os.path.exists('.coords'):
+            with open('.coords') as f:
+                self.pixel_coords, self.coords = eval(f.read())
+        else:
+            self.pixel_coords, self.coords = zip(*get_grid(px, w, h))
+            with open('.coords', 'w+') as f:
+                f.write(repr((self.pixel_coords, self.coords)))
+        self.colors = [get_color(px[x, y]) for x, y in self.pixel_coords]
 
 
 def readscreen(screenshot):
-    img = Image.open(screenshot).convert('RGB')
+    import struct
+    with open(screenshot) as fb:
+        w, = struct.unpack('I', fb.read(4))
+        h, = struct.unpack('I', fb.read(4))
+        f, = struct.unpack('I', fb.read(4))
+        args = 'raw', 'RGBA', 0, 1
+        img = Image.frombuffer('RGB', (w, h), fb.read(), *args)
+        img = img.convert('RGB')
     px = img.load()
     w, h = img.size
     return GameScreen(px, w, h)
@@ -29,7 +44,7 @@ def get_grid(px, w, h):
         for v_edges in vertical_edges(px, w, h):
             x, _ = h_edges[len(h_edges) / 2]
             _, y = v_edges[len(v_edges) / 2]
-            yield get_color(px[x, y]), scale_coord(w, h, x, y)
+            yield (x, y), scale_coord(w, h, x, y)
 
 
 def group_edges(func):
@@ -107,15 +122,3 @@ def hue(r, g, b):
 
 def scale_coord(w, h, x, y):
     return int(x * nexus_7_width / w), int(y * nexus_7_height / h)
-
-
-if __name__ == '__main__':
-    filename = 'screenshot.png'
-    img = Image.open(filename).convert('RGB')
-    px = img.load()
-    w, h = img.size
-
-    grid = list(get_grid())
-    colors = list(set(color for color, _ in grid))
-    for color, _ in grid:
-        print get_color(color)
