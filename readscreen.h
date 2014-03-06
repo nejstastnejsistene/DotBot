@@ -69,8 +69,8 @@ double get_hue(color_t c);
 int get_color(color_t c);
 
 int search_for_edge(screencap_t *img, edge_t edge, int other_coord);
-void get_offsets(screencap_t *img, edge_t e, bounds_t *bnds, int offs[6]);
+int get_offsets(screencap_t *img, edge_t e, bounds_t *bnds, int offs[6]);
 
-void readscreen(char *filename);
+int readscreen(char *filename);
 
 #endif // READSCREEN_H
