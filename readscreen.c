@@ -5,29 +5,77 @@
 #include <unistd.h>
 #include <sys/mman.h>
 
-#define COLOR_EQ(c, x) (((c).value & 0xffffff) == (x))
-#define IS_WHITE(img, x, y) COLOR_EQ(get_pixel((img), (x) , (y)), 0xffffff)
-// #define IS_BG(c) ((c).value == 0xffeaebea || (c).value == 0xffebebeb)
+#include "readscreen.h"
 
-typedef struct {
-    unsigned char r, b, g, a;
-} rgba_t;
 
-typedef union {
-    unsigned int value;
-    rgba_t rgba;
-} color_t;
-
-typedef struct {
-    int width, height, f;
-    color_t *mm;
-} image_t;
-
-color_t get_pixel(image_t *img, int x, int y) {
-    return img->mm[img->width * y + x + 3];
+void open_screencap(char *filename, screencap_t *img) {
+    img->fd = open(filename, O_RDONLY);
+    if (img->fd == -1) {
+        perror(filename);
+        exit(1);
+    }
+    read(img->fd, &img->width,  sizeof(img->width));
+    read(img->fd, &img->height, sizeof(img->height));
+    read(img->fd, &img->format, sizeof(img->format));
+    int bpp;
+    switch (img->format) {
+        case PIXEL_FORMAT_RGBA_8888:
+            bpp = 4;
+            break;
+        case PIXEL_FORMAT_RGB_888:
+            bpp = 3;
+            break;
+        case PIXEL_FORMAT_RGB_565:
+            bpp = 2;
+            break;
+        default:
+            fprintf(stderr, "Unsupported pixel format: %d\n", img->format);
+            exit(1);
+    }
+    img->size = img->width * img->height * bpp + 12;
+    img->data = mmap(NULL, img->size, PROT_READ, MAP_PRIVATE, img->fd, 0);
+    if (img->data == MAP_FAILED) {
+        perror("open_screenshot");
+        exit(1);
+    }
 }
 
-double hue(color_t c) {
+
+void close_screencap(screencap_t *img) {
+    close(img->fd);
+    munmap(img->data, img->size);
+}
+
+
+color_t get_pixel(screencap_t *img, int x, int y) {
+    rgba_t pixel;
+    rgb_888_t rgb888;
+    rgb_565_t rgb565;
+    char *base = (char*)img->data + 12;
+    int offset = img->width * y + x;
+    switch (img->format) {
+        case PIXEL_FORMAT_RGBA_8888:
+            pixel = ((rgba_8888_t*)base)[offset];
+            break;
+        case PIXEL_FORMAT_RGB_888:
+            rgb888 = ((rgb_888_t*)base)[offset];
+            pixel.r = rgb888.r;
+            pixel.g = rgb888.g;
+            pixel.b = rgb888.b;
+            pixel.a = 0xff;
+            break;
+        case PIXEL_FORMAT_RGB_565:
+            rgb565 = ((rgb_565_t*)base)[offset];
+            pixel.r = rgb565.r << 3;
+            pixel.g = rgb565.g << 2;
+            pixel.b = rgb565.b << 3;
+            pixel.a = 0xff;
+            break;
+    }
+    return (color_t)pixel;
+}
+
+double get_hue(color_t c) {
     unsigned char r, g, b;
     double x;
     r = c.rgba.r;
@@ -41,11 +89,11 @@ double hue(color_t c) {
     }
 }
 
-int color(color_t c) {
-    return (int) (5 * hue(c) / (2 * M_PI) + 0.5);
+int get_color(color_t c) {
+    return (int) (5 * get_hue(c) / (2 * M_PI) + 0.5);
 }
 
-void get_playing_area_dim_start(image_t *img, int *x_dest, int *y_dest) {
+void get_playing_area_dim_start(screencap_t *img, int *x_dest, int *y_dest) {
     int x, y;
     int lo = 0;
     int hi = img->width;
@@ -82,7 +130,7 @@ void get_playing_area_dim_start(image_t *img, int *x_dest, int *y_dest) {
     *y_dest = y;
 }
 
-void get_playing_area_dim_end(image_t *img, int *x_dest, int *y_dest) {
+void get_playing_area_dim_end(screencap_t *img, int *x_dest, int *y_dest) {
     int x, y;
     int lo = 0;
     int hi = img->width;
@@ -119,7 +167,7 @@ void get_playing_area_dim_end(image_t *img, int *x_dest, int *y_dest) {
     *y_dest = y;
 }
 
-void get_row_coords(image_t *img, int x0, int y0, int x1, int y1, int rows[6]) {
+void get_row_coords(screencap_t *img, int x0, int y0, int x1, int y1, int rows[6]) {
     int x, y;
     for (y = y0; y <= y1; y++) {
         for (x = x0; x <= x0 + (x1 - x0) / 4; x++) {
@@ -141,7 +189,7 @@ void get_row_coords(image_t *img, int x0, int y0, int x1, int y1, int rows[6]) {
     }
 }
 
-void get_col_coords(image_t *img, int x0, int y0, int x1, int y1, int cols[6]) {
+void get_col_coords(screencap_t *img, int x0, int y0, int x1, int y1, int cols[6]) {
     int x, y;
     for (x = x0; x <= x1; x++) {
         for (y = y0; y <= y0 + (y1 - y0) / 4; y++) {
@@ -165,41 +213,39 @@ void get_col_coords(image_t *img, int x0, int y0, int x1, int y1, int cols[6]) {
 
 
 void readscreen(char *filename) {
-    int fd = open(filename, O_RDONLY);
-    image_t img;
-    read(fd, &img.width,  sizeof(img.width));
-    read(fd, &img.height, sizeof(img.height));
-    read(fd, &img.f,      sizeof(img.f));
-    if (img.f != 1) {
-        fprintf(stderr, "f must equal 1\n");
-        exit(1);
+    screencap_t img;
+    open_screencap(filename, &img);
+
+    int x0, y0, x1, y1;
+    get_playing_area_dim_start(&img, &x0, &y0);
+    get_playing_area_dim_end(&img, &x1, &y1);
+
+    int xs[6], ys[6];
+    get_row_coords(&img, x0, y0, x1, y1, ys);
+    get_col_coords(&img, x0, y0, x1, y1, xs);
+
+    coord_t coords[36];
+    int r, c;
+    for (c = 0; c < 6; c++) {
+        for (r = 0; r < 6; r++) {
+            coords[6*c+r].x = xs[c];
+            coords[6*c+r].y = ys[r];
+        }
     }
-    int size = img.width * img.height * sizeof(color_t) + 12;
-    img.mm = mmap(NULL, size, PROT_READ, MAP_PRIVATE, fd, 0);
-    if (img.mm != MAP_FAILED) {
-        int x0, y0, x1, y1;
-        get_playing_area_dim_start(&img, &x0, &y0);
-        get_playing_area_dim_end(&img, &x1, &y1);
 
-        int xs[6], ys[6];
-        get_row_coords(&img, x0, y0, x1, y1, ys);
-        get_col_coords(&img, x0, y0, x1, y1, xs);
-        int r, c;
-        for (c = 0; c < 6; c++) {
-            for (r = 0; r < 6; r++) {
-                printf("%d ", color(get_pixel(&img, xs[c], ys[r])));
-            }
+    for (c = 0; c < 6; c++) {
+        for (r = 0; r < 6; r++) {
+            coord_t coord = coords[6*c+r];
+            color_t color = get_pixel(&img, coord.x, coord.y);
+            printf("%d ", get_color(color));
         }
-        printf("\n");
-        for (c = 0; c < 6; c++) {
-            for (r = 0; r < 6; r++) {
-                printf("%d %d\n", xs[c], ys[r]);
-            }
+    }
+    printf("\n");
+    for (c = 0; c < 6; c++) {
+        for (r = 0; r < 6; r++) {
+            coord_t coord = coords[6*c+r];
+            printf("%d %d\n", coord.x, coord.y);
         }
-
-        munmap(img.mm, size);
-    } else {
-        perror("mmap");
     }
 }
 
