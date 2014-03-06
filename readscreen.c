@@ -8,7 +8,7 @@
 #include "readscreen.h"
 
 
-void open_screencap(char *filename, screencap_t *img) {
+void open_screencap(const char *filename, screencap_t *img) {
     img->fd = open(filename, O_RDONLY);
     if (img->fd == -1) {
         perror(filename);
@@ -164,7 +164,7 @@ int find_edge(screencap_t *img, edge_t edge, int other_coord) {
         }
     }
 
-    /* If the search had succeeded, it would have returned already.
+    /* If the search had succeeded, it would have returned already. */
     return -1;
 }
 
@@ -242,38 +242,63 @@ int get_offsets(screencap_t *img, edge_t e, bounds_t *bnds, int offs[6]) {
 }
 
 
-int readscreen(char *filename) {
-    screencap_t img;
-    open_screencap(filename, &img);
-
+int readscreen(screencap_t *img, int colors[36], coord_t coords[36]) {
     bounds_t bounds;
-    bounds.x0 = find_edge(&img, LEFT,   img.height / 2);
-    bounds.y0 = find_edge(&img, TOP,    bounds.x0);
-    bounds.x1 = find_edge(&img, RIGHT,  img.height / 2);
-    bounds.y1 = find_edge(&img, BOTTOM, bounds.x1);
+    bounds.x0 = find_edge(img, LEFT,   img->height / 2);
+    bounds.y0 = find_edge(img, TOP,    bounds.x0);
+    bounds.x1 = find_edge(img, RIGHT,  img->height / 2);
+    bounds.y1 = find_edge(img, BOTTOM, bounds.x1);
 
     if (bounds.x0 < 0 || bounds.y0 < 0 || bounds.x1 < 0 || bounds.y1 < 0) {
         return -1;
     }
 
     int xs[6], ys[6];
-    if (get_offsets(&img, TOP,   &bounds, xs) < 0) return -1;
-    if (get_offsets(&img, LEFT,  &bounds, ys) < 0) return -1;
+    if (get_offsets(img, TOP,   &bounds, xs) < 0) return -1;
+    if (get_offsets(img, LEFT,  &bounds, ys) < 0) return -1;
 
-    coord_t coords[36];
     int r, c;
     for (c = 0; c < 6; c++) {
         for (r = 0; r < 6; r++) {
+
+            /* If the pixel where we are expecting a dot is white,
+             * the dots are probably not done falling yet.
+             */
+            color_t dot = get_pixel(img, xs[c], ys[r]);
+            if (COLOR_EQ(dot, WHITE)) {
+                return -1;
+            }
+
+            colors[6*c+r]= get_color(dot);
             coords[6*c+r].x = xs[c];
             coords[6*c+r].y = ys[r];
         }
     }
 
+    return 0;
+}
+
+
+int main() {
+    int colors[36];
+    coord_t coords[36];
+
+    const char *filename = "/data/local/DotBot/screenshot.raw";
+
+    screencap_t img;
+    open_screencap(filename, &img);
+    int ret = readscreen(&img, colors, coords);
+    close_screencap(&img);
+
+    if (ret < 0) {
+        fprintf(stderr, "bummer\n");
+        return 1; 
+    }
+
+    int r, c;
     for (c = 0; c < 6; c++) {
         for (r = 0; r < 6; r++) {
-            coord_t coord = coords[6*c+r];
-            color_t color = get_pixel(&img, coord.x, coord.y);
-            printf("%d ", get_color(color));
+            printf("%d ", colors[6*c+r]);
         }
     }
     printf("\n");
@@ -284,14 +309,5 @@ int readscreen(char *filename) {
         }
     }
 
-    return 0;
-}
-
-
-int main() {
-    if (readscreen("/data/local/DotBot/screenshot.raw") < 0) {
-        fprintf(stderr, "bummer\n");
-        return 1; 
-    }
     return 0;
 }

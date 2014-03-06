@@ -61,7 +61,7 @@ typedef struct {
 
 typedef enum { LEFT, RIGHT, TOP, BOTTOM } edge_t;
 
-void open_screencap(char *filename, screencap_t *img);
+void open_screencap(const char *filename, screencap_t *img);
 void close_screencap(screencap_t *img);
 color_t get_pixel(screencap_t *img, int x, int y);
 
@@ -71,6 +71,6 @@ int get_color(color_t c);
 int search_for_edge(screencap_t *img, edge_t edge, int other_coord);
 int get_offsets(screencap_t *img, edge_t e, bounds_t *bnds, int offs[6]);
 
-int readscreen(char *filename);
+int readscreen(screencap_t *img, int colors[36], coord_t coords[36]);
 
 #endif // READSCREEN_H
