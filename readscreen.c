@@ -93,84 +93,44 @@ int get_color(color_t c) {
     return (int) (5 * get_hue(c) / (2 * M_PI) + 0.5);
 }
 
-void get_playing_area_dim_start(screencap_t *img, int *x_dest, int *y_dest) {
-    int x, y;
-    int lo = 0;
-    int hi = img->width;
-    y = img->height / 2;
+typedef enum { LEFT, RIGHT, TOP, BOTTOM } edge_t;
+
+int search_for_edge(screencap_t *img, edge_t edge, int other_coord) {
+    int lo, hi, h, dir, a, b;
+    b = other_coord;
+    switch (edge) {
+        case LEFT:   lo = 0; hi = img->width;  h = 1; dir = -1; break;
+        case RIGHT:  lo = 0; hi = img->width;  h = 1; dir =  1; break;
+        case TOP:    lo = 0; hi = img->height; h = 0; dir = -1; break;
+        case BOTTOM: lo = 0; hi = img->height; h = 0; dir =  1; break;
+    }
+    int in_bounds, neighbor_in_bounds;
     while (lo <= hi) {
-        x = (lo + hi) / 2;
-        if (IS_WHITE(img, x, y)) {
-            if (!IS_WHITE(img, x - 1, y)) {
-                break;
+        a = (lo + hi) / 2;
+        in_bounds = h ? IS_WHITE(img, a, b) : IS_WHITE(img, b, a);
+        if (in_bounds) {
+            neighbor_in_bounds =
+                h ? IS_WHITE(img, a + dir, b) : IS_WHITE(img, b, a + dir);
+            if (!neighbor_in_bounds) {
+                return a;
+            } else if (dir < 0) {
+                hi = a - 1;
             } else {
-                hi = x - 1;
+                lo = a + 1;
             }
+        } else if (dir < 0) {
+            lo = a + 1;
         } else {
-            lo = x + 1;
+            hi = a - 1;
         }
     }
-
-    lo = 0;
-    hi = img->height;
-    while (lo <= hi) {
-        y = (lo + hi) / 2;
-        if (IS_WHITE(img, x, y)) {
-            if (!IS_WHITE(img, x, y - 1)) {
-                break;
-            } else { 
-                hi = y - 1;
-            }
-        } else {
-            lo = y + 1;
-        }
-    }
-
-    *x_dest = x;
-    *y_dest = y;
-}
-
-void get_playing_area_dim_end(screencap_t *img, int *x_dest, int *y_dest) {
-    int x, y;
-    int lo = 0;
-    int hi = img->width;
-    y = img->height / 2;
-    while (lo <= hi) {
-        x = (lo + hi) / 2;
-        if (IS_WHITE(img, x, y)) {
-            if (IS_WHITE(img, x + 1, y)) {
-                lo = x + 1;
-            } else {
-                break;
-            }
-        } else {
-            hi = x - 1;
-        }
-    }
-
-    lo = 0;
-    hi = img->height;
-    while (lo <= hi) {
-        y = (lo + hi) / 2;
-        if (IS_WHITE(img, x, y)) {
-            if (IS_WHITE(img, x, y + 1)) {
-                lo = y + 1;
-            } else { 
-                break;
-            }
-        } else {
-            hi = y - 1;
-        }
-    }
-
-    *x_dest = x;
-    *y_dest = y;
+    return -1;
 }
 
 void get_row_coords(screencap_t *img, int x0, int y0, int x1, int y1, int rows[6]) {
     int x, y;
     for (y = y0; y <= y1; y++) {
-        for (x = x0; x <= x0 + (x1 - x0) / 4; x++) {
+        for (x = x0; x <= x0 + (x1 - x0) / 6; x++) {
             if (!IS_WHITE(img, x, y)) {
                 int i;
                 for (i = 0; i < 6; i++) {
@@ -192,7 +152,7 @@ void get_row_coords(screencap_t *img, int x0, int y0, int x1, int y1, int rows[6
 void get_col_coords(screencap_t *img, int x0, int y0, int x1, int y1, int cols[6]) {
     int x, y;
     for (x = x0; x <= x1; x++) {
-        for (y = y0; y <= y0 + (y1 - y0) / 4; y++) {
+        for (y = y0; y <= y0 + (y1 - y0) / 6; y++) {
             if (!IS_WHITE(img, x, y)) {
                 int i;
                 for (i = 0; i < 6; i++) {
@@ -217,8 +177,10 @@ void readscreen(char *filename) {
     open_screencap(filename, &img);
 
     int x0, y0, x1, y1;
-    get_playing_area_dim_start(&img, &x0, &y0);
-    get_playing_area_dim_end(&img, &x1, &y1);
+    x0 = search_for_edge(&img, LEFT, img.height / 2);
+    y0 = search_for_edge(&img, TOP, x0);
+    x1 = search_for_edge(&img, RIGHT, img.height / 2);
+    y1 = search_for_edge(&img, BOTTOM, x1);
 
     int xs[6], ys[6];
     get_row_coords(&img, x0, y0, x1, y1, ys);
