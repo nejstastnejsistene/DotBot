@@ -33,6 +33,10 @@ $(BIN)/find_cycles: $(SRC)/find_cycles.c vector.o set.o
 	$(MKDIR) $(BIN)
 	$(CC) -o $@ $^
 
+readscreen: readscreen.c readscreen.h
+	arm-linux-gnueabi-gcc-4.6 -Wall -g -static -o $@ $< -lm
+	adb push $@ /data/local/DotBot/$@
+
 clean:
 	rm -rf $(SRC)/cycles.h *.o $(BIN) dotbot/*.pyc
 
