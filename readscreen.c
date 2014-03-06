@@ -75,6 +75,7 @@ color_t get_pixel(screencap_t *img, int x, int y) {
     return (color_t)pixel;
 }
 
+
 double get_hue(color_t c) {
     unsigned char r, g, b;
     double x;
@@ -89,11 +90,11 @@ double get_hue(color_t c) {
     }
 }
 
+
 int get_color(color_t c) {
     return (int) (5 * get_hue(c) / (2 * M_PI) + 0.5);
 }
 
-typedef enum { LEFT, RIGHT, TOP, BOTTOM } edge_t;
 
 int search_for_edge(screencap_t *img, edge_t edge, int other_coord) {
     int lo, hi, h, dir, a, b;
@@ -127,45 +128,32 @@ int search_for_edge(screencap_t *img, edge_t edge, int other_coord) {
     return -1;
 }
 
-void get_row_coords(screencap_t *img, int x0, int y0, int x1, int y1, int rows[6]) {
-    int x, y;
-    for (y = y0; y <= y1; y++) {
-        for (x = x0; x <= x0 + (x1 - x0) / 6; x++) {
-            if (!IS_WHITE(img, x, y)) {
-                int i;
-                for (i = 0; i < 6; i++) {
-                    int y0 = y;
-                    while (!IS_WHITE(img, x, ++y));
-                    rows[i] = y0 + (y - y0) / 2;
-                    if (i < 5) {
-                        while (IS_WHITE(img, x, ++y));
-                    } else {
-                        return;
-                    }
-                }
-                return;
-            }
+
+void get_offsets(screencap_t *img, edge_t e, bounds_t *bnds, int offs[6]) {
+    int i;
+    for (i = 0; i <= bnds->x1 - bnds->x0; i++) {
+        if (!IS_WHITE(img, bnds->x0 + i, bnds->y0 + i)) {
+            break;
         }
     }
-}
 
-void get_col_coords(screencap_t *img, int x0, int y0, int x1, int y1, int cols[6]) {
-    int x, y;
-    for (x = x0; x <= x1; x++) {
-        for (y = y0; y <= y0 + (y1 - y0) / 6; y++) {
-            if (!IS_WHITE(img, x, y)) {
-                int i;
-                for (i = 0; i < 6; i++) {
-                    int x0 = x;
-                    while (!IS_WHITE(img, ++x, y));
-                    cols[i] = x0 + (x - x0) / 2;
-                    if (i < 5) {
-                        while (IS_WHITE(img, ++x, y));
-                    } else {
-                        return;
-                    }
-                }
-                return;
+    int a = ((e == LEFT) ? bnds->x0 : bnds->y0) + i;
+    int b = ((e == LEFT) ? bnds->y0 : bnds->x0) + i;
+
+    int j;
+    for (j = 0; j < 6; j++) {
+        int b0 = b;
+        if (e == LEFT) {
+            while (!IS_WHITE(img, a, ++b));
+        } else {
+            while (!IS_WHITE(img, ++b, a));
+        }
+        offs[j] = b0 + (b - b0) / 2;
+        if (j < 5) {
+            if (e == LEFT) {
+                while (IS_WHITE(img, a, ++b));
+            } else {
+                while (IS_WHITE(img, ++b, a));
             }
         }
     }
@@ -176,15 +164,15 @@ void readscreen(char *filename) {
     screencap_t img;
     open_screencap(filename, &img);
 
-    int x0, y0, x1, y1;
-    x0 = search_for_edge(&img, LEFT, img.height / 2);
-    y0 = search_for_edge(&img, TOP, x0);
-    x1 = search_for_edge(&img, RIGHT, img.height / 2);
-    y1 = search_for_edge(&img, BOTTOM, x1);
+    bounds_t bounds;
+    bounds.x0 = search_for_edge(&img, LEFT,   img.height / 2);
+    bounds.y0 = search_for_edge(&img, TOP,    bounds.x0);
+    bounds.x1 = search_for_edge(&img, RIGHT,  img.height / 2);
+    bounds.y1 = search_for_edge(&img, BOTTOM, bounds.x1);
 
     int xs[6], ys[6];
-    get_row_coords(&img, x0, y0, x1, y1, ys);
-    get_col_coords(&img, x0, y0, x1, y1, xs);
+    get_offsets(&img, TOP,   &bounds, xs);
+    get_offsets(&img, LEFT,  &bounds, ys);
 
     coord_t coords[36];
     int r, c;
@@ -210,6 +198,7 @@ void readscreen(char *filename) {
         }
     }
 }
+
 
 int main() {
     readscreen("/data/local/DotBot/screenshot.raw");

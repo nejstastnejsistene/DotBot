@@ -48,11 +48,29 @@ typedef struct {
 } screencap_t;
 
 typedef struct {
+    int x0;
+    int y0;
+    int x1;
+    int y1;
+} bounds_t;
+
+typedef struct {
     int x;
     int y;
 } coord_t;
 
+typedef enum { LEFT, RIGHT, TOP, BOTTOM } edge_t;
+
 void open_screencap(char *filename, screencap_t *img);
 void close_screencap(screencap_t *img);
+color_t get_pixel(screencap_t *img, int x, int y);
+
+double get_hue(color_t c);
+int get_color(color_t c);
+
+int search_for_edge(screencap_t *img, edge_t edge, int other_coord);
+void get_offsets(screencap_t *img, edge_t e, bounds_t *bnds, int offs[6]);
+
+void readscreen(char *filename);
 
 #endif // READSCREEN_H
