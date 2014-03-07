@@ -17,6 +17,10 @@ typedef unsigned char capabilities_t[CAPLEN];
 
 typedef enum { INVALID, SINGLE_TOUCH, MULTI_TOUCH_B } screen_type_t;
 
+const char *conf = "/data/local/DotBot/touchscreen.conf";
+const char *devicename_fmt = "device-name: %s\n";
+const char *screentype_fmt = "screen-type: %d\n";
+
 screen_type_t get_screen_type(fd) {
     capabilities_t caps;
     if (ioctl(fd, EVIOCGBIT(EV_ABS, CAPLEN), caps) != CAPLEN) {
@@ -35,7 +39,7 @@ screen_type_t get_screen_type(fd) {
     }
 }
 
-void get_touchscreen(char *devname, screen_type_t *type) {
+void find_touchscreen(char *devname, screen_type_t *type) {
     char *filename;
     DIR *dir;
     struct dirent *de;
@@ -66,10 +70,28 @@ void get_touchscreen(char *devname, screen_type_t *type) {
     }
 }
 
+
+void get_touchscreen(char *devname, screen_type_t *type) {
+    int exists = access(conf, R_OK) == 0;
+    FILE *f;
+    if (exists) {
+        f = fopen(conf, "r");
+        fscanf(f, devicename_fmt, devname);
+        fscanf(f, screentype_fmt, (int*)type);
+    } else {
+        f = fopen(conf, "w+");
+        find_touchscreen(devname, type);
+        fprintf(f, devicename_fmt, devname);
+        fprintf(f, screentype_fmt, *type);
+    }
+    fclose(f);
+}
+
+
 int main() {
     char devname[PATH_MAX];
     screen_type_t type;
     get_touchscreen(devname, &type);
-    printf("%s, type=%d\n", devname, type);
+    printf("path=%s, type=%d\n", devname, type);
     return 0;
 }
