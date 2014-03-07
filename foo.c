@@ -15,31 +15,63 @@
 
 typedef unsigned char capabilities_t[CAPLEN];
 
-typedef enum { INVALID, SINGLE_TOUCH, MULTI_TOUCH_B } screen_type_t;
+typedef enum {
+    INVALID,
+    SINGLE_TOUCH,
+    MULTI_TOUCH_A,
+    MULTI_TOUCH_B,
+} screen_type_t;
 
-const char *conf = "/data/local/DotBot/touchscreen.conf";
+typedef struct {
+    char path[PATH_MAX];
+    screen_type_t type;
+    int xmin;
+    int xmax;
+    int ymin;
+    int ymax;
+} screen_conf_t;
+
+const char *confpath = "/data/local/DotBot/touchscreen.conf";
 const char *devicename_fmt = "device-name: %s\n";
 const char *screentype_fmt = "screen-type: %d\n";
+const char *xmin_fmt = "minimum-x: %d\n";
+const char *xmax_fmt = "maximum-x: %d\n";
+const char *ymin_fmt = "minimum-y: %d\n";
+const char *ymax_fmt = "maximum-y: %d\n";
 
-screen_type_t get_screen_type(fd) {
+void get_screen_info(int fd, screen_conf_t *conf) {
     capabilities_t caps;
     if (ioctl(fd, EVIOCGBIT(EV_ABS, CAPLEN), caps) != CAPLEN) {
         fprintf(stderr, "Error reading device capabilities.\n");
-        return INVALID;
+        conf->type = INVALID;
+        return;
     }
 
+    struct input_absinfo abs;
     if (HAS_CAP(caps, ABS_MT_POSITION_X) &&
             HAS_CAP(caps, ABS_MT_POSITION_Y) &&
             HAS_CAP(caps, ABS_MT_TRACKING_ID)) {
-        return MULTI_TOUCH_B;
+        conf->type = MULTI_TOUCH_B;
+        ioctl(fd, EVIOCGABS(ABS_MT_POSITION_X), &abs);
+        conf->xmin = abs.minimum;
+        conf->xmax = abs.maximum;
+        ioctl(fd, EVIOCGABS(ABS_MT_POSITION_Y), &abs);
+        conf->ymin = abs.minimum;
+        conf->ymax = abs.maximum;
     } else if (HAS_CAP(caps, ABS_X) && HAS_CAP(caps, ABS_Y)) {
-        return SINGLE_TOUCH;
+        conf->type = SINGLE_TOUCH;
+        ioctl(fd, EVIOCGABS(ABS_MT_POSITION_X), &abs);
+        conf->xmin = abs.minimum;
+        conf->xmax = abs.maximum;
+        ioctl(fd, EVIOCGABS(ABS_MT_POSITION_Y), &abs);
+        conf->ymin = abs.minimum;
+        conf->ymax = abs.maximum;
     } else {
-        return INVALID;
+        conf->type = INVALID;
     }
 }
 
-void find_touchscreen(char *devname, screen_type_t *type) {
+void find_touchscreen(screen_conf_t *conf) {
     char *filename;
     DIR *dir;
     struct dirent *de;
@@ -49,8 +81,8 @@ void find_touchscreen(char *devname, screen_type_t *type) {
         perror(dirname);
         exit(1);
     }
-    strcpy(devname, dirname);
-    filename = devname + strlen(devname);
+    strcpy(conf->path, dirname);
+    filename = conf->path + strlen(conf->path);
     *filename++ = '/';
     while ((de = readdir(dir))) {
         if (strcmp(de->d_name, ".") == 0 ||
@@ -58,40 +90,51 @@ void find_touchscreen(char *devname, screen_type_t *type) {
             continue;
         }
         strcpy(filename, de->d_name);
-        int fd = open(devname, O_RDONLY);
+        int fd = open(conf->path, O_RDONLY);
         if (fd < 0) {
+            perror(conf->path);
             continue;
         } 
-        *type = get_screen_type(fd);
+        get_screen_info(fd, conf);
         close(fd);
-        if (*type != INVALID) {
+        if (conf->type != INVALID) {
             break;
         }
     }
 }
 
 
-void get_touchscreen(char *devname, screen_type_t *type) {
-    int exists = access(conf, R_OK) == 0;
+
+
+
+void get_touchscreen(screen_conf_t *conf) {
+    int exists = access(confpath, R_OK) == 0;
     FILE *f;
     if (exists) {
-        f = fopen(conf, "r");
-        fscanf(f, devicename_fmt, devname);
-        fscanf(f, screentype_fmt, (int*)type);
+        f = fopen(confpath, "r");
+        fscanf(f, devicename_fmt, conf->path);
+        fscanf(f, screentype_fmt, (int*)&conf->type);
+        fscanf(f, xmin_fmt, &conf->xmin);
+        fscanf(f, xmax_fmt, &conf->xmax);
+        fscanf(f, ymin_fmt, &conf->ymin);
+        fscanf(f, ymax_fmt, &conf->ymax);
     } else {
-        f = fopen(conf, "w+");
-        find_touchscreen(devname, type);
-        fprintf(f, devicename_fmt, devname);
-        fprintf(f, screentype_fmt, *type);
+        f = fopen(confpath, "w+");
+        find_touchscreen(conf);
+        fprintf(f, devicename_fmt, conf->path);
+        fprintf(f, screentype_fmt, conf->type);
+        fprintf(f, xmin_fmt, conf->xmin);
+        fprintf(f, xmax_fmt, conf->xmax);
+        fprintf(f, ymin_fmt, conf->ymin);
+        fprintf(f, ymax_fmt, conf->ymax);
     }
     fclose(f);
 }
 
 
 int main() {
-    char devname[PATH_MAX];
-    screen_type_t type;
-    get_touchscreen(devname, &type);
-    printf("path=%s, type=%d\n", devname, type);
+    screen_conf_t conf;
+    get_touchscreen(&conf);
+    printf("path=%s, type=%d\n", conf.path, conf.type);
     return 0;
 }
