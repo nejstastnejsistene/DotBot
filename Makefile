@@ -1,5 +1,8 @@
 CC = gcc
-CFLAGS = -c -g -O3 -Wall
+CFLAGS = -g -O0 -Wall
+
+ARM_CC = arm-linux-gnueabi-gcc-4.6
+ARM_CFLAGS = $(CFLAGS) -static
 
 MKDIR = mkdir -p
 PYTHON = python
@@ -9,22 +12,21 @@ BIN = bin
 
 $(BIN)/DotBot: $(SRC)/DotBot.c emu.o dots.o cycles.o vector.o set.o
 	$(MKDIR) $(BIN)
-	$(CC) -o $@ $^
+	$(CC) $(CFLAGS) -o $@ $^
 
-emu.o: $(SRC)/emu.c $(SRC)/emu.h
-	$(CC) $(CFLAGS) $<
+emu.o: $(SRC)/emu.c $(SRC)/emu.h $(CC) $(CFLAGS) $<
 
 dots.o: $(SRC)/dots.c $(SRC)/dots.h $(SRC)/cycles.h
-	$(CC) $(CFLAGS) $<
+	$(CC) $(CFLAGS) -c $<
 
 cycles.o: $(SRC)/cycles.c $(SRC)/cycles.h
-	$(CC) $(CFLAGS) $<
+	$(CC) $(CFLAGS) -c $<
 
 vector.o: $(SRC)/vector.c $(SRC)/vector.h
-	$(CC) $(CFLAGS) $<
+	$(CC) $(CFLAGS) -c $<
 
 set.o: $(SRC)/set.c $(SRC)/set.h
-	$(CC) $(CFLAGS) $<
+	$(CC) $(CFLAGS) -c $<
 
 $(SRC)/cycles.h: gen_cycles_h.py $(BIN)/find_cycles
 	$(BIN)/find_cycles | $(PYTHON) $< > $@
@@ -34,11 +36,14 @@ $(BIN)/find_cycles: $(SRC)/find_cycles.c vector.o set.o
 	$(CC) -o $@ $^
 
 readscreen: readscreen.c readscreen.h
-	arm-linux-gnueabi-gcc-4.6 -Wall -g -static -o $@ $< -lm
+	$(ARM_CC) $(ARM_CFLAGS) -o $@ $< -lm
 	adb push $@ /data/local/DotBot/$@
 
-conf: conf.c conf.h
-	arm-linux-gnueabi-gcc-4.6 -Wall -g -static -o $@ $<
+conf.o: conf.c conf.h
+	$(ARM_CC) $(ARM_CFLAGS) -c $<
+
+foo: foo.c conf.o
+	$(ARM_CC) $(ARM_CFLAGS) -o $@ $^
 	adb push $@ /data/local/DotBot/$@
 
 clean:

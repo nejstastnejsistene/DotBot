@@ -1,13 +1,10 @@
 #include <dirent.h>
 #include <fcntl.h>
-#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <sys/ioctl.h>
-
-#include <linux/input.h>
 
 #include "conf.h"
 
@@ -169,9 +166,9 @@ void get_screen_info(int fd, screen_conf_t *conf) {
 }
 
 
-int main() {
+/*int main() {
     screen_conf_t conf;
     get_touchscreen(&conf);
     printf("path=%s, type=%d\n", conf.path, conf.type);
     return 0;
-}
+}*/

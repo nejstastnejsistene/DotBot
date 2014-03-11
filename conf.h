@@ -1,8 +1,19 @@
 #ifndef CONF_H
 #define CONF_H
 
+#include <limits.h>
+#include <linux/input.h>
+
 #define CAPLEN (ABS_CNT / 8)
 #define HAS_CAP(caps, cap) ((caps)[(cap) / 8] & 1 << ((cap) % 8))
+
+#define confpath       ((const char *)"/data/local/DotBot/touchscreen.conf")
+#define devicename_fmt ((const char *)"device-name: %s\n")
+#define screentype_fmt ((const char *)"screen-type: %d\n")
+#define xmin_fmt       ((const char *)"minimum-x: %d\n")
+#define xmax_fmt       ((const char *)"maximum-x: %d\n")
+#define ymin_fmt       ((const char *)"minimum-y: %d\n")
+#define ymax_fmt       ((const char *)"maximum-y: %d\n")
 
 typedef unsigned char capabilities_t[CAPLEN];
 
@@ -20,15 +31,13 @@ typedef struct {
     int xmax;
     int ymin;
     int ymax;
+    int width;
+    int height;
 } screen_conf_t;
 
-const char *confpath = "/data/local/DotBot/touchscreen.conf";
-const char *devicename_fmt = "device-name: %s\n";
-const char *screentype_fmt = "screen-type: %d\n";
-const char *xmin_fmt = "minimum-x: %d\n";
-const char *xmax_fmt = "maximum-x: %d\n";
-const char *ymin_fmt = "minimum-y: %d\n";
-const char *ymax_fmt = "maximum-y: %d\n";
+typedef struct {
+    int x, y;
+} coord_t;
 
 void get_touchscreen(screen_conf_t *conf);
 void read_config(screen_conf_t *conf);
