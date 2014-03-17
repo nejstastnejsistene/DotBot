@@ -1,8 +1,8 @@
 CC = gcc
-CFLAGS = -g -O0 -Wall
+CFLAGS = -g -Wall
 
-ARM_CC = arm-linux-gnueabi-gcc-4.6
-ARM_CFLAGS = $(CFLAGS) -static
+ARM_CC = arm-linux-androideabi-gcc
+ARM_CFLAGS = $(CFLAGS) -static -Iinclude
 
 MKDIR = mkdir -p
 PYTHON = python
@@ -10,13 +10,11 @@ PYTHON = python
 SRC = src
 BIN = bin
 
-$(BIN)/DotBot: $(SRC)/DotBot.c emu.o dots.o cycles.o vector.o set.o
+$(BIN)/DotBot: $(SRC)/DotBot.c dots.o cycles.o cycles.o vector.o set.o
 	$(MKDIR) $(BIN)
 	$(CC) $(CFLAGS) -o $@ $^
 
-emu.o: $(SRC)/emu.c $(SRC)/emu.h $(CC) $(CFLAGS) $<
-
-dots.o: $(SRC)/dots.c $(SRC)/dots.h $(SRC)/cycles.h
+dots.o: $(SRC)/dots.c $(SRC)/dots.h $(SRC)/litcycles.h
 	$(CC) $(CFLAGS) -c $<
 
 cycles.o: $(SRC)/cycles.c $(SRC)/cycles.h
@@ -28,7 +26,7 @@ vector.o: $(SRC)/vector.c $(SRC)/vector.h
 set.o: $(SRC)/set.c $(SRC)/set.h
 	$(CC) $(CFLAGS) -c $<
 
-$(SRC)/cycles.h: gen_cycles_h.py $(BIN)/find_cycles
+$(SRC)/litcycles.h: gen_cycles_h.py $(BIN)/find_cycles
 	$(BIN)/find_cycles | $(PYTHON) $< > $@
 
 $(BIN)/find_cycles: $(SRC)/find_cycles.c vector.o set.o
@@ -47,6 +45,6 @@ foo: foo.c conf.o
 	adb push $@ /data/local/DotBot/$@
 
 clean:
-	rm -rf $(SRC)/cycles.h *.o $(BIN) dotbot/*.pyc
+	rm -rf $(SRC)/litcycles.h *.o $(BIN) dotbot/*.pyc
 
 .PHONY: clean

@@ -1,4 +1,4 @@
-src/cycles.h
+src/litcycles.h
 *.o
 bin
 *.pyc

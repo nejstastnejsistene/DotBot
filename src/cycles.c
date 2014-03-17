@@ -1,6 +1,6 @@
 #include "dots.h"
 #include "cycles.h"
-
+#include "litcycles.h"
 
 int get_cycles(vector_t *moves, SET partition, color_t color, SET color_mask) {
 

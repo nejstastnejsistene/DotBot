@@ -3,7 +3,8 @@
 #include <string.h>
 #include <time.h>
 
-#include "emu.h"
+#include "cycles.h"
+#include "dots.h"
 
 #define MAX_DEPTH 3
 #define CUTOFF (NUM_DOTS / 2)
@@ -124,115 +125,20 @@ void _choose_move(board_t *board, cache_t cache,
     }
 }
 
-//#define DEBUG
-
-int play_round() {
-    board_t board;
-    cache_t cache;
-
-    printf("Seed: %u\n", seed);
-
-    randomize_board(board.board);
-    print_board(board.board);
-
-    int turn, score = 0;
-    for (turn = 0; turn < 35; turn++) {
-        board_init(&board);
-        memset(&cache, 0, sizeof(cache));
-
-        SET move = choose_move(&board, cache, 35 - turn);
-
-        translation_t result;
-        get_translation(&board, cache, move, &result);
-
-        score += result.score;
-
-        color_t color = EMPTY;
-        if (element(CYCLE_FLAG, move)) {
-            color = move >> COLOR_SHIFT;
-        }
-        fill_empty_dots(result.board, color);
-
-#ifdef DEBUG
-        color = EMPTY;
-        int i;
-        for (i = 0; i < NUM_DOTS; i++) {
-            if (element(i, move)) {
-                color = board.board[i];
-                break;
-            }
-        }
-        print_bitmask(move, EMPTY, color);
-        printf("Moves remaining: %d, Score: %d\n", 35 - turn - 1, score);
-        printf("Seed: %u\n", seed);
-        print_board(result.board);
-#endif
-
-        memcpy(board.board, result.board, sizeof(result.board));
-    }
-
-    return score;
-}
-
-
-/*
-void get_path(board_t *board, SET move, vector_t *path) {
-    int pos;
-    for (pos = 0; pos < NUM_DOTS; pos++) {
-        if (element(pos, move) && board->adj.degree[pos] <= 1) {
-            return _get_path(board, move, path, pos);
-        }
-    }
-}
-
-void _get_path(board_t *board, SET move, vector_t *path, int pos) {
-    int i;
-    do {
-        vector_append(path, pos);
-        move = remove(move, pos);
-        for (i = 0; i < board->adj.degree[pos]; i++) {
-            if (element(board->adj.neighbors[pos][i], move)) {
-                pos = board->adj.neighbors[pos][i];
-                break;
-            }
-        }
-    } while (move);
-}
-*/
 
 int main(int argc, char **argv) {
-    if (argc > 1) {
-        if (strcmp(argv[1], "-") == 0) {
-            board_t board;
+        board_t board;
 
-            int i;
-            for (i = 0; i < NUM_DOTS; i++) {
-                fscanf(stdin, "%d", board.board + i);
-            }
-            board_init(&board);
-
-            cache_t cache;
-            memset(&cache, 0, sizeof(cache));
-
-            SET move = choose_move(&board, cache, 35);
-            printf("%d 0x%llx\n", element(CYCLE_FLAG, move) ? 1 : 0, move);
-    /*        vector_t path;
-            vector_init(&path);
-            get_path(&board, move, &path);
-            for (i = 0; i < path.length; i++) {
-                printf("%d %d\n", ROW((int)path.items[i]),
-                                  COL((int)path.items[i]));
-            }
-            vector_free(&path);
-            */
-            return 0;
-        } else {
-            seed = atoi(argv[1]);
+        int i;
+        for (i = 0; i < NUM_DOTS; i++) {
+            fscanf(stdin, "%d", board.board + i);
         }
-    } else {
-        seed = time(NULL);
-    }
-    int score = play_round();
-    printf("Final score: %d\n", score);
-    return 0;
+        board_init(&board);
+
+        cache_t cache;
+        memset(&cache, 0, sizeof(cache));
+
+        SET move = choose_move(&board, cache, 35);
+        printf("%d 0x%llx\n", element(CYCLE_FLAG, move) ? 1 : 0, move);
+        return 0;
 }
