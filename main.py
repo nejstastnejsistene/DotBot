@@ -46,22 +46,13 @@ def get_path(has_cycle, bitmap):
         yield path[0]
 
 
-nexus_7_width = 1343.0
-nexus_7_height = 2239.0
-
-def scale_coord(w, h, x, y):
-    return int(x * nexus_7_width / w), int(y * nexus_7_height / h)
-
-
 def DotBot(x, y):
     p = Popen(['bin/DotBot', '-'], stdin=PIPE, stdout=PIPE, stderr=PIPE)
     out, err = p.communicate(x)
     retcode = p.wait()
     if retcode != 0:
         raise exception, err
-    w = 1200
-    h = 1920
-    coords = [scale_coord(w, h, *map(int, x.split())) for x in y.split('\n')]
+    coords = [map(int, x.split()) for x in y.split('\n')]
     for r, c in get_path(*map(eval, out.split())):
         yield coords[6 * c + r]
 

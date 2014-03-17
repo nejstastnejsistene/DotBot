@@ -28,8 +28,8 @@ void event(int fd, int type, int code, int value) {
 }
 
 void scale_coord(screen_conf_t *conf, int *x, int *y) {
-    *x *= conf->xmax / 1200;
-    *y *= conf->ymax / 1920;
+    *x = conf->xmin + (*x - conf->xmin) * conf->xmax / 1200;
+    *y = conf->ymin + (*y - conf->ymin) * conf->ymax / 1920;
 }
 
 static int tracking_id = 0;
