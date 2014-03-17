@@ -10,6 +10,10 @@ PYTHON = python
 SRC = src
 BIN = bin
 
+default: all
+
+all: $(BIN)/DotBot $(BIN)/readscreen $(BIN)/sendevents
+
 $(BIN)/DotBot: $(SRC)/DotBot.c dots.o cycles.o cycles.o vector.o set.o
 	$(MKDIR) $(BIN)
 	$(CC) $(CFLAGS) -o $@ $^
@@ -33,16 +37,16 @@ $(BIN)/find_cycles: $(SRC)/find_cycles.c vector.o set.o
 	$(MKDIR) $(BIN)
 	$(CC) -o $@ $^
 
-readscreen: readscreen.c readscreen.h
+$(BIN)/readscreen: $(SRC)/readscreen.c $(SRC)/readscreen.h
 	$(ARM_CC) $(ARM_CFLAGS) -o $@ $< -lm
-	adb push $@ /data/local/DotBot/$@
+	adb push $@ /data/local/DotBot/.
 
-conf.o: conf.c conf.h
+conf.o: $(SRC)/conf.c $(SRC)/conf.h
 	$(ARM_CC) $(ARM_CFLAGS) -c $<
 
-foo: foo.c conf.o
+$(BIN)/sendevents: $(SRC)/sendevents.c conf.o
 	$(ARM_CC) $(ARM_CFLAGS) -o $@ $^
-	adb push $@ /data/local/DotBot/$@
+	adb push $@ /data/local/DotBot/.
 
 clean:
 	rm -rf $(SRC)/litcycles.h *.o $(BIN) dotbot/*.pyc

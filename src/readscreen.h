@@ -1,6 +1,7 @@
 #ifndef READSCREEN_H
 #define READSCREEN_H
 
+#include "dots.h"
 
 #define PIXEL_FORMAT_RGBA_8888 1
 #define PIXEL_FORMAT_RGB_888 3
@@ -36,7 +37,7 @@ typedef rgba_8888_t rgba_t;
 typedef union {
     unsigned int value;
     rgba_t rgba;
-} color_t;
+} pixel_t;
 
 typedef struct {
     int fd;
@@ -54,23 +55,18 @@ typedef struct {
     int y1;
 } bounds_t;
 
-typedef struct {
-    int x;
-    int y;
-} coord_t;
-
 typedef enum { LEFT, RIGHT, TOP, BOTTOM } edge_t;
 
 void open_screencap(const char *filename, screencap_t *img);
 void close_screencap(screencap_t *img);
-color_t get_pixel(screencap_t *img, int x, int y);
+pixel_t get_pixel(screencap_t *img, int x, int y);
 
-double get_hue(color_t c);
-int get_color(color_t c);
+double get_hue(pixel_t c);
+color_t get_color(pixel_t c);
 
 int search_for_edge(screencap_t *img, edge_t edge, int other_coord);
-int get_offsets(screencap_t *img, edge_t e, bounds_t *bnds, int offs[6]);
+int get_offsets(screencap_t *img, edge_t e, bounds_t *bnds, int offs[GRID_DIM]);
 
-int readscreen(screencap_t *img, int colors[36], coord_t coords[36]);
+int readscreen(screencap_t *img, int colors[NUM_DOTS], coord_t coords[NUM_DOTS]);
 
 #endif // READSCREEN_H

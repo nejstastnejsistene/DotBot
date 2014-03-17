@@ -47,14 +47,14 @@ void close_screencap(screencap_t *img) {
 }
 
 
-color_t get_pixel(screencap_t *img, int x, int y) {
+pixel_t get_pixel(screencap_t *img, int x, int y) {
     rgba_t pixel = { 0, 0, 0, 0 };
 
     /* Return the unintialized pixel if the requested coordinate
      * is out of bounds.
      */
     if (x < 0 || y < 0 || x >= img->width || y >= img->height) {
-        return (color_t)pixel;
+        return (pixel_t)pixel;
     }
 
     rgb_888_t rgb888;
@@ -84,11 +84,11 @@ color_t get_pixel(screencap_t *img, int x, int y) {
     }
 
     /* Return the uninitialized pixel if the format is unknown. */
-    return (color_t)pixel;
+    return (pixel_t)pixel;
 }
 
 
-double get_hue(color_t c) {
+double get_hue(pixel_t c) {
     unsigned char r, g, b;
     double x;
     r = c.rgba.r;
@@ -103,7 +103,7 @@ double get_hue(color_t c) {
 }
 
 
-int get_color(color_t c) {
+color_t get_color(pixel_t c) {
     return (int) (5 * get_hue(c) / (2 * M_PI) + 0.5);
 }
 
@@ -200,7 +200,7 @@ int get_offsets(screencap_t *img, edge_t e, bounds_t *bnds, int offs[6]) {
     int a = ((e == TOP) ? bnds->x0 : bnds->y0) + i;
     int b = ((e == TOP) ? bnds->y0 : bnds->x0) + i;
 
-    for (i = 0; i < 6; i++) {
+    for (i = 0; i < GRID_DIM; i++) {
         
         /* At the beginning of this loop, we should be at the beginning
          * of a dot. Record the beginning in `a0`.
@@ -242,7 +242,7 @@ int get_offsets(screencap_t *img, edge_t e, bounds_t *bnds, int offs[6]) {
 }
 
 
-int readscreen(screencap_t *img, int colors[36], coord_t coords[36]) {
+int readscreen(screencap_t *img, int colors[NUM_DOTS], coord_t coords[NUM_DOTS]) {
     bounds_t bounds;
     bounds.x0 = find_edge(img, LEFT,   img->height / 2);
     bounds.y0 = find_edge(img, TOP,    bounds.x0);
@@ -253,25 +253,25 @@ int readscreen(screencap_t *img, int colors[36], coord_t coords[36]) {
         return -1;
     }
 
-    int xs[6], ys[6];
+    int xs[NUM_COLS], ys[NUM_ROWS];
     if (get_offsets(img, TOP,   &bounds, xs) < 0) return -1;
     if (get_offsets(img, LEFT,  &bounds, ys) < 0) return -1;
 
     int r, c;
-    for (c = 0; c < 6; c++) {
-        for (r = 0; r < 6; r++) {
+    for (c = 0; c < NUM_COLS; c++) {
+        for (r = 0; r < NUM_ROWS; r++) {
 
             /* If the pixel where we are expecting a dot is white,
              * the dots are probably not done falling yet.
              */
-            color_t dot = get_pixel(img, xs[c], ys[r]);
+            pixel_t dot = get_pixel(img, xs[c], ys[r]);
             if (COLOR_EQ(dot, WHITE)) {
                 return -1;
             }
 
-            colors[6*c+r]= get_color(dot);
-            coords[6*c+r].x = xs[c];
-            coords[6*c+r].y = ys[r];
+            colors[POINT(r, c)]= get_color(dot);
+            coords[POINT(r, c)].x = xs[c];
+            coords[POINT(r, c)].y = ys[r];
         }
     }
 
@@ -280,8 +280,8 @@ int readscreen(screencap_t *img, int colors[36], coord_t coords[36]) {
 
 
 int main() {
-    int colors[36];
-    coord_t coords[36];
+    int colors[NUM_DOTS];
+    coord_t coords[NUM_DOTS];
 
     const char *filename = "/data/local/DotBot/screenshot.raw";
 
@@ -296,15 +296,15 @@ int main() {
     }
 
     int r, c;
-    for (c = 0; c < 6; c++) {
-        for (r = 0; r < 6; r++) {
-            printf("%d ", colors[6*c+r]);
+    for (c = 0; c < NUM_COLS; c++) {
+        for (r = 0; r < NUM_ROWS; r++) {
+            printf("%d ", colors[NUM_ROWS*c+r]);
         }
     }
     printf("\n");
-    for (c = 0; c < 6; c++) {
-        for (r = 0; r < 6; r++) {
-            coord_t coord = coords[6*c+r];
+    for (c = 0; c < NUM_COLS; c++) {
+        for (r = 0; r < NUM_ROWS; r++) {
+            coord_t coord = coords[POINT(r, c)];
             printf("%d %d\n", coord.x, coord.y);
         }
     }

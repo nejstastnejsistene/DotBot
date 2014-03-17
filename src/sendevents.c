@@ -82,7 +82,6 @@ void gesture(screen_conf_t *conf, int fd, int num_coords, coord_t *coords) {
             event(fd, EV_ABS, ABS_MT_TRACKING_ID, tracking_id++);
             for (i = 0; i < num_coords; i++) {
                 scale_coord(conf, &coords[i].x, &coords[i].y);
-                printf("%d, %d\n", coords[i].x, coords[i].y);
                 event(fd, EV_ABS, ABS_MT_POSITION_X, coords[i].x); 
                 event(fd, EV_ABS, ABS_MT_POSITION_Y, coords[i].y); 
                 event(fd, EV_SYN, SYN_REPORT, 0);
@@ -106,7 +105,6 @@ int main() {
     }
     get_touchscreen(&conf);
     int fd = open(conf.path, O_RDWR);
-    printf("%d\n", i);
     if (i == 1) {
         click(&conf, fd, coords[0].x, coords[0].y);
         s();

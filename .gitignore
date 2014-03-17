@@ -3,5 +3,3 @@ src/litcycles.h
 bin
 *.pyc
 *.plist
-.coords
-path.txt

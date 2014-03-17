@@ -5,8 +5,9 @@
 #include "vector.h"
 
 /* Macros for dealing with column major arrays of dots. */
-#define NUM_ROWS 6
-#define NUM_COLS 6
+#define GRID_DIM 6
+#define NUM_ROWS GRID_DIM
+#define NUM_COLS GRID_DIM
 #define NUM_DOTS (NUM_ROWS * NUM_COLS)
 #define ROW(point) ((point) % NUM_COLS)
 #define COL(point) ((point) / NUM_COLS)
@@ -123,5 +124,10 @@ void print_board(int *board);
 
 /* Print a colorful UTF8 representation of a bitmask. */
 void print_bitmask(SET mask, int fg, int bg);
+
+typedef struct {
+    int x;
+    int y;
+} coord_t;
 
 #endif // DOTS_H
