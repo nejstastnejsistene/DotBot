@@ -6,6 +6,7 @@
 #include <time.h>
 
 #include "conf.h"
+#include "dots.h"
 
 #define SHORT_DELAY 50000000
 #define LONG_DELAY (3 * SHORT_DELAY)
@@ -40,75 +41,84 @@ void scale_coord(screen_conf_t *conf, int *x, int *y) {
 
 static int tracking_id = 0;
 
-void click(screen_conf_t *conf, int fd, int x, int y) {
+void setpos(screen_conf_t *conf, int fd, int x, int y) {
     scale_coord(conf, &x, &y);
     switch (conf->type) {
         case SINGLE_TOUCH:
             event(fd, EV_ABS, ABS_X, x);
             event(fd, EV_ABS, ABS_Y, y);
-            event(fd, EV_KEY, BTN_TOUCH, 1);
-            event(fd, EV_SYN, SYN_REPORT, 0);
-            event(fd, EV_KEY, BTN_TOUCH, 0);
-            event(fd, EV_SYN, SYN_REPORT, 0);
             break;
         case MULTI_TOUCH_B:
-            event(fd, EV_ABS, ABS_MT_TRACKING_ID, tracking_id++);
             event(fd, EV_ABS, ABS_MT_POSITION_X, x);
             event(fd, EV_ABS, ABS_MT_POSITION_Y, y);
-            event(fd, EV_SYN, SYN_REPORT, 0);
-            event(fd, EV_ABS, ABS_MT_TRACKING_ID, -1);
-            event(fd, EV_SYN, SYN_REPORT, 0);
             break;
         default:
             fprintf(stderr, "UGH!\n");
             exit(1);
             break;
     }
+}
+
+#define sync(fd) (event(fd, EV_SYN, SYN_REPORT, 0))
+
+void finger_down(screen_conf_t *conf, int fd, int x, int y) {
+    switch (conf->type) {
+        case SINGLE_TOUCH:
+            setpos(conf, fd, x, y);
+            event(fd, EV_KEY, BTN_TOUCH, 1);
+            sync(fd);
+            break;
+        case MULTI_TOUCH_B:
+            event(fd, EV_ABS, ABS_MT_TRACKING_ID, tracking_id++);
+            setpos(conf, fd, x, y);
+            sync(fd);
+            break;
+        default:
+            fprintf(stderr, "UGH!\n");
+            exit(1);
+            break;
+    }
+}
+
+void finger_up(screen_conf_t *conf, int fd) {
+    switch (conf->type) {
+        case SINGLE_TOUCH:
+            event(fd, EV_KEY, BTN_TOUCH, 0);
+            sync(fd);
+            break;
+        case MULTI_TOUCH_B:
+            event(fd, EV_ABS, ABS_MT_TRACKING_ID, -1);
+            sync(fd);
+            break;
+        default:
+            fprintf(stderr, "UGH!\n");
+            exit(1);
+            break;
+    }
+}
+
+void click(screen_conf_t *conf, int fd, int x, int y) {
+    finger_down(conf, fd, x, y);
+    finger_up(conf, fd);
 }
 
 void gesture(screen_conf_t *conf, int fd, int num_coords, coord_t *coords) {
     int i;
-    switch (conf->type) {
-        case SINGLE_TOUCH:
-            scale_coord(conf, &coords[0].x, &coords[0].y);
-            event(fd, EV_ABS, ABS_X, coords[0].x); 
-            event(fd, EV_ABS, ABS_Y, coords[0].y); 
-            event(fd, EV_KEY, BTN_TOUCH, 1);
-            event(fd, EV_SYN, SYN_REPORT, 0);
-            for (i = 1; i < num_coords; i++) {
-                scale_coord(conf, &coords[0].x, &coords[0].y);
-                event(fd, EV_ABS, ABS_X, coords[i].x); 
-                event(fd, EV_ABS, ABS_Y, coords[i].y); 
-                event(fd, EV_SYN, SYN_REPORT, 0);
-            }
-            event(fd, EV_KEY, BTN_TOUCH, 0);
-            do_sleep(LONG_DELAY);
-            event(fd, EV_SYN, SYN_REPORT, 0);
-            break;
-        case MULTI_TOUCH_B:
-            event(fd, EV_ABS, ABS_MT_TRACKING_ID, tracking_id++);
-            for (i = 0; i < num_coords; i++) {
-                scale_coord(conf, &coords[i].x, &coords[i].y);
-                event(fd, EV_ABS, ABS_MT_POSITION_X, coords[i].x); 
-                event(fd, EV_ABS, ABS_MT_POSITION_Y, coords[i].y); 
-                event(fd, EV_SYN, SYN_REPORT, 0);
-            }
-            event(fd, EV_ABS, ABS_MT_TRACKING_ID, -1);
-            do_sleep(LONG_DELAY);
-            event(fd, EV_SYN, SYN_REPORT, 0);
-            break;
-        default:
-            fprintf(stderr, "UGH!\n");
-            exit(1);
-            break;
+    finger_down(conf, fd, coords[0].x, coords[0].y);
+    for (i = 1; i < num_coords; i++) {
+        setpos(conf, fd, coords[i].x, coords[i].y);
+        sync(fd);
     }
+    do_sleep(LONG_DELAY);
+    finger_up(conf, fd);
 }
 
 int main() {
     screen_conf_t conf;
-    coord_t coords[1000];
+    coord_t coords[NUM_DOTS];
     int i = 0;
-    while (i < 1000 && fscanf(stdin, "%d %d\n", &coords[i].x, &coords[i].y) == 2) {
+    while (i < NUM_DOTS &&
+            fscanf(stdin, "%d %d\n", &coords[i].x, &coords[i].y) == 2) {
         i++;
     }
     get_touchscreen(&conf);

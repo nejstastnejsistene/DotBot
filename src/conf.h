@@ -35,10 +35,6 @@ typedef struct {
     int height;
 } screen_conf_t;
 
-typedef struct {
-    int x, y;
-} coord_t;
-
 void get_touchscreen(screen_conf_t *conf);
 void read_config(screen_conf_t *conf);
 void update_config(screen_conf_t *conf);
