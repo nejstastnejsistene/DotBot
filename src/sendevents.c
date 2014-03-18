@@ -7,10 +7,14 @@
 
 #include "conf.h"
 
-void s() {
+#define SHORT_DELAY 50000000
+#define LONG_DELAY (3 * SHORT_DELAY)
+
+
+void do_sleep(int nsec) {
     struct timespec t; 
     t.tv_sec = 0;
-    t.tv_nsec = 50000000;
+    t.tv_nsec = nsec;
     nanosleep(&t, NULL);
 }
 
@@ -24,7 +28,9 @@ void event(int fd, int type, int code, int value) {
         perror("error writing event");
         exit(1);
     }
-    s();
+    if (type == EV_SYN && code == SYN_REPORT) {
+        do_sleep(SHORT_DELAY);
+    }
 }
 
 void scale_coord(screen_conf_t *conf, int *x, int *y) {
@@ -76,6 +82,7 @@ void gesture(screen_conf_t *conf, int fd, int num_coords, coord_t *coords) {
                 event(fd, EV_SYN, SYN_REPORT, 0);
             }
             event(fd, EV_KEY, BTN_TOUCH, 0);
+            do_sleep(LONG_DELAY);
             event(fd, EV_SYN, SYN_REPORT, 0);
             break;
         case MULTI_TOUCH_B:
@@ -87,6 +94,7 @@ void gesture(screen_conf_t *conf, int fd, int num_coords, coord_t *coords) {
                 event(fd, EV_SYN, SYN_REPORT, 0);
             }
             event(fd, EV_ABS, ABS_MT_TRACKING_ID, -1);
+            do_sleep(LONG_DELAY);
             event(fd, EV_SYN, SYN_REPORT, 0);
             break;
         default:
@@ -100,14 +108,13 @@ int main() {
     screen_conf_t conf;
     coord_t coords[1000];
     int i = 0;
-    while (fscanf(stdin, "%d %d\n", &coords[i].x, &coords[i].y) == 2) {
+    while (i < 1000 && fscanf(stdin, "%d %d\n", &coords[i].x, &coords[i].y) == 2) {
         i++;
     }
     get_touchscreen(&conf);
     int fd = open(conf.path, O_RDWR);
     if (i == 1) {
         click(&conf, fd, coords[0].x, coords[0].y);
-        s();
         click(&conf, fd, coords[0].x, coords[0].y);
     } else {
         gesture(&conf, fd, i, coords);
