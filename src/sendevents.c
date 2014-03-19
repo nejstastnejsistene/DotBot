@@ -8,14 +8,16 @@
 #include "conf.h"
 #include "dots.h"
 
-#define SHORT_DELAY 50000000
-#define LONG_DELAY (3 * SHORT_DELAY)
+
+#define NUM_POINTS 5
+#define SHORT_DELAY 7500000
+#define LONG_DELAY (20 * SHORT_DELAY)
 
 
 void do_sleep(int nsec) {
     struct timespec t; 
-    t.tv_sec = 0;
-    t.tv_nsec = nsec;
+    t.tv_sec = nsec / 1000000000;
+    t.tv_nsec = nsec % 1000000000;
     nanosleep(&t, NULL);
 }
 
@@ -102,13 +104,24 @@ void click(screen_conf_t *conf, int fd, int x, int y) {
     finger_up(conf, fd);
 }
 
+
 void gesture(screen_conf_t *conf, int fd, int num_coords, coord_t *coords) {
-    int i;
-    finger_down(conf, fd, coords[0].x, coords[0].y);
+    int last_x = coords[0].x;
+    int last_y = coords[0].y;
+    finger_down(conf, fd, last_x, last_y);
+    int i, j;
     for (i = 1; i < num_coords; i++) {
-        setpos(conf, fd, coords[i].x, coords[i].y);
-        sync(fd);
+        int x = coords[i].x;
+        int y = coords[i].y;
+        for (j = 1; j < NUM_POINTS + 1; j++) {
+            setpos(conf, fd, last_x + j * (x - last_x) / NUM_POINTS,
+                             last_y + j * (y - last_y) / NUM_POINTS);
+            sync(fd);
+        }
+        last_x = x;
+        last_y = y;
     }
+    printf("%d\n", LONG_DELAY % 1000000000);
     do_sleep(LONG_DELAY);
     finger_up(conf, fd);
 }
