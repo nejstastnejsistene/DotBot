@@ -65,4 +65,4 @@ if __name__ == '__main__':
             f.write('{} {}\n'.format(x, y))
         f.flush()
         print getoutput('adb push {} /data/local/DotBot/paths.txt'.format(f.name))
-        print getoutput('adb shell "/data/local/DotBot/sendevents < /data/local/DotBot/paths.txt"')
+        print getoutput('adb shell "time /data/local/DotBot/sendevents < /data/local/DotBot/paths.txt"')

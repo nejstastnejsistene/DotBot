@@ -9,9 +9,9 @@
 #include "dots.h"
 
 
-#define NUM_POINTS 5
-#define SHORT_DELAY 7500000
-#define LONG_DELAY (20 * SHORT_DELAY)
+#define NUM_POINTS 10
+#define SHORT_DELAY 10000000
+#define LONG_DELAY (10 * SHORT_DELAY)
 
 
 void do_sleep(int nsec) {
@@ -121,7 +121,6 @@ void gesture(screen_conf_t *conf, int fd, int num_coords, coord_t *coords) {
         last_x = x;
         last_y = y;
     }
-    printf("%d\n", LONG_DELAY % 1000000000);
     do_sleep(LONG_DELAY);
     finger_up(conf, fd);
 }
