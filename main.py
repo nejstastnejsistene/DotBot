@@ -63,7 +63,8 @@ if __name__ == '__main__':
     try:
         colors, coords = output.split('\n', 1)
     except:
-        print >> sys.stderr, output
+        if output:
+            print >> sys.stderr, output
         sys.exit(1)
     with tempfile.NamedTemporaryFile() as f:
         for x, y in DotBot(colors, coords):

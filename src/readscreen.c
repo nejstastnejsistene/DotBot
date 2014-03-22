@@ -6,6 +6,9 @@
 #include <sys/mman.h>
 
 #include "readscreen.h"
+#include "conf.h"
+#include "monkey.h"
+
 
 int screencap(const char *filename) {
     char command[1024] = "screencap ";
@@ -109,7 +112,7 @@ double get_hue(pixel_t c) {
 
 
 color_t get_color(pixel_t c) {
-    return (int) (5 * get_hue(c) / (2 * M_PI) + 0.5);
+    return (int) (NUM_COLORS * get_hue(c) / (2 * M_PI) + 0.5) % NUM_COLORS;
 }
 
 
@@ -287,7 +290,8 @@ int read_play_again_screen(screencap_t *img, coord_t *coord) {
     int bottom_edge = find_edge(img, BOTTOM, img->width / 2);
     coord->x = img->width / 2;
     coord->y = bottom_edge + (img->height - bottom_edge) / 2;
-    return 0;
+    color_t color = get_color(get_pixel(img, coord->x, coord->y));
+    return (color == BLUE || color == GREEN) ? 0 : -1;
 }
 
 
@@ -308,11 +312,15 @@ int main() {
     ret = readscreen(&img, colors, coords);
     if (ret < 0) {
         coord_t coord;
-        read_play_again_screen(&img, &coord);
-        pixel_t color = get_pixel(&img, coord.x, coord.y);
-        printf("(%d, %d) %x ", coord.x, coord.y, color.value);
-        printf("red: %x, green: %x, blue: %x hue: %d\n", color.rgba.r, color.rgba.g, color.rgba.b, get_color(color));
-        return 1;
+        ret = read_play_again_screen(&img, &coord);
+        if (ret == 0) {
+            screen_conf_t conf;
+            get_touchscreen(&conf);
+            int fd = open(conf.path, O_RDWR);
+            click(&conf, fd, coord.x, coord.y);
+            close(fd);
+            return 0;
+        }
     }
 
     close_screencap(&img);

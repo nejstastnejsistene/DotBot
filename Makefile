@@ -37,14 +37,17 @@ $(BIN)/find_cycles: $(SRC)/find_cycles.c vector.o set.o
 	$(MKDIR) $(BIN)
 	$(CC) -o $@ $^
 
-$(BIN)/readscreen: $(SRC)/readscreen.c $(SRC)/readscreen.h
-	$(ARM_CC) $(ARM_CFLAGS) -o $@ $< -lm
+$(BIN)/readscreen: $(SRC)/readscreen.c $(SRC)/readscreen.h conf.o monkey.o
+	$(ARM_CC) $(ARM_CFLAGS) -o $@ $< conf.o monkey.o -lm
 	adb push $@ /data/local/DotBot/.
 
 conf.o: $(SRC)/conf.c $(SRC)/conf.h
 	$(ARM_CC) $(ARM_CFLAGS) -c $<
 
-$(BIN)/sendevents: $(SRC)/sendevents.c conf.o
+monkey.o: $(SRC)/monkey.c $(SRC)/monkey.h
+	$(ARM_CC) $(ARM_CFLAGS) -c $<
+
+$(BIN)/sendevents: $(SRC)/sendevents.c conf.o monkey.o
 	$(ARM_CC) $(ARM_CFLAGS) -o $@ $^
 	adb push $@ /data/local/DotBot/.
 
