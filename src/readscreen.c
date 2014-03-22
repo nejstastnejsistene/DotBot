@@ -7,6 +7,11 @@
 
 #include "readscreen.h"
 
+int screencap(const char *filename) {
+    char command[1024] = "screencap ";
+    strcat(command, filename);
+    return system(command);
+}
 
 void open_screencap(const char *filename, screencap_t *img) {
     img->fd = open(filename, O_RDONLY);
@@ -284,14 +289,23 @@ int main() {
     coord_t coords[NUM_DOTS];
 
     const char *filename = "/data/local/DotBot/screenshot.raw";
+    if (screencap(filename) != 0) {
+        perror("screencap");    
+        return 1;
+    }
 
     screencap_t img;
     open_screencap(filename, &img);
     int ret = readscreen(&img, colors, coords);
     close_screencap(&img);
 
+    if (unlink(filename) != 0) {
+        perror("unlink");    
+        return 1;
+    }
+
     if (ret < 0) {
-        fprintf(stderr, "bummer\n");
+        fprintf(stderr, "unable to read screen\n");
         return 1; 
     }
 

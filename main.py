@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import sys
 import tempfile
 from collections import defaultdict
 from commands import getoutput
@@ -46,23 +47,27 @@ def get_path(has_cycle, bitmap):
         yield path[0]
 
 
-def DotBot(x, y):
+def DotBot(colors, coords):
     p = Popen(['bin/DotBot', '-'], stdin=PIPE, stdout=PIPE, stderr=PIPE)
-    out, err = p.communicate(x)
+    out, err = p.communicate(colors)
     retcode = p.wait()
     if retcode != 0:
         raise exception, err
-    coords = [map(int, x.split()) for x in y.split('\n')]
+    coords = [map(int, colors.split()) for colors in coords.split('\n')]
     for r, c in get_path(*map(eval, out.split())):
         yield coords[6 * c + r]
 
 
 if __name__ == '__main__':
-    getoutput('adb shell screencap /data/local/DotBot/screenshot.raw')
-    x, y = getoutput('adb shell /data/local/DotBot/readscreen').split('\n', 1)
+    output = getoutput('adb shell /data/local/DotBot/readscreen')
+    try:
+        colors, coords = output.split('\n', 1)
+    except:
+        print >> sys.stderr, output
+        sys.exit(1)
     with tempfile.NamedTemporaryFile() as f:
-        for x, y in DotBot(x, y):
+        for x, y in DotBot(colors, coords):
             f.write('{} {}\n'.format(x, y))
         f.flush()
-        print getoutput('adb push {} /data/local/DotBot/paths.txt'.format(f.name))
-        print getoutput('adb shell "time /data/local/DotBot/sendevents < /data/local/DotBot/paths.txt"')
+        getoutput('adb push {} /data/local/DotBot/paths.txt'.format(f.name))
+        getoutput('adb shell "/data/local/DotBot/sendevents < /data/local/DotBot/paths.txt"')
