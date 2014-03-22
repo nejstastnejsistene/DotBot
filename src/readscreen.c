@@ -288,6 +288,9 @@ int readscreen(screencap_t *img, int colors[NUM_DOTS], coord_t coords[NUM_DOTS])
 
 int read_play_again_screen(screencap_t *img, coord_t *coord) {
     int bottom_edge = find_edge(img, BOTTOM, img->width / 4);
+    if (bottom_edge < img->height / 2) {
+        return -1;
+    }
     coord->x = img->width / 2;
     coord->y = bottom_edge + (img->height - bottom_edge) / 2;
     color_t color = get_color(get_pixel(img, coord->x, coord->y));
@@ -295,8 +298,11 @@ int read_play_again_screen(screencap_t *img, coord_t *coord) {
 }
 
 
-int read_high_score_screen(screencap_t *img, coord_t *coord) {
+int read_alert_screen(screencap_t *img, coord_t *coord) {
     int bottom_edge = find_edge(img, BOTTOM, img->width / 4);
+    if (bottom_edge < img->height / 2) {
+        return -1;
+    }
     int x, y = bottom_edge;
     while (!IS_BLACK(img, 0, ++y)) {
         for (x = img->width / 4; x < img->width / 2; x++) {
@@ -339,7 +345,7 @@ int main() {
             return 0;
         }
 
-        ret = read_high_score_screen(&img, &coord);
+        ret = read_alert_screen(&img, &coord);
         if (ret == 0) {
             screen_conf_t conf;
             get_touchscreen(&conf);
