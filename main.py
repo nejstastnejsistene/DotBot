@@ -62,13 +62,13 @@ if __name__ == '__main__':
     output = getoutput('adb shell /data/local/DotBot/readscreen')
     try:
         colors, coords = output.split('\n', 1)
+        with tempfile.NamedTemporaryFile() as f:
+            for x, y in DotBot(colors, coords):
+                f.write('{} {}\n'.format(x, y))
+            f.flush()
+            getoutput('adb push {} /data/local/DotBot/paths.txt'.format(f.name))
+            getoutput('adb shell "/data/local/DotBot/sendevents < /data/local/DotBot/paths.txt"')
     except:
         if output:
             print >> sys.stderr, output
         sys.exit(1)
-    with tempfile.NamedTemporaryFile() as f:
-        for x, y in DotBot(colors, coords):
-            f.write('{} {}\n'.format(x, y))
-        f.flush()
-        getoutput('adb push {} /data/local/DotBot/paths.txt'.format(f.name))
-        getoutput('adb shell "/data/local/DotBot/sendevents < /data/local/DotBot/paths.txt"')

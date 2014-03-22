@@ -6,8 +6,8 @@ connect() {
     output=`adb devices | grep $ip`
     if [ -z "$output" ]; then
         echo 'connecting...'
-        adb kill-server
-        adb start-server
+        #adb kill-server
+        #adb start-server
         adb connect $ip
     fi
 }

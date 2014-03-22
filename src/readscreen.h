@@ -9,8 +9,10 @@
 
 #define RGB_MASK 0xffffff
 #define WHITE 0xffffff
+#define BLACK 0x000000
 #define COLOR_EQ(c, x) (((c).value & RGB_MASK) == (x))
 #define IS_WHITE(img, x, y) COLOR_EQ(get_pixel((img), (x) , (y)), WHITE)
+#define IS_BLACK(img, x, y) COLOR_EQ(get_pixel((img), (x) , (y)), BLACK)
 
 
 typedef struct {

@@ -287,11 +287,27 @@ int readscreen(screencap_t *img, int colors[NUM_DOTS], coord_t coords[NUM_DOTS])
 }
 
 int read_play_again_screen(screencap_t *img, coord_t *coord) {
-    int bottom_edge = find_edge(img, BOTTOM, img->width / 2);
+    int bottom_edge = find_edge(img, BOTTOM, img->width / 4);
     coord->x = img->width / 2;
     coord->y = bottom_edge + (img->height - bottom_edge) / 2;
     color_t color = get_color(get_pixel(img, coord->x, coord->y));
     return (color == BLUE || color == GREEN) ? 0 : -1;
+}
+
+
+int read_high_score_screen(screencap_t *img, coord_t *coord) {
+    int bottom_edge = find_edge(img, BOTTOM, img->width / 4);
+    int x, y = bottom_edge;
+    while (!IS_BLACK(img, 0, ++y)) {
+        for (x = img->width / 4; x < img->width / 2; x++) {
+            if (IS_BLACK(img, x, y)) {
+                coord->x = img->width / 2;
+                coord->y = y;
+                return 0;
+            }
+        }
+    }
+    return -1;
 }
 
 
@@ -312,7 +328,18 @@ int main() {
     ret = readscreen(&img, colors, coords);
     if (ret < 0) {
         coord_t coord;
+
         ret = read_play_again_screen(&img, &coord);
+        if (ret == 0) {
+            screen_conf_t conf;
+            get_touchscreen(&conf);
+            int fd = open(conf.path, O_RDWR);
+            click(&conf, fd, coord.x, coord.y);
+            close(fd);
+            return 0;
+        }
+
+        ret = read_high_score_screen(&img, &coord);
         if (ret == 0) {
             screen_conf_t conf;
             get_touchscreen(&conf);
