@@ -283,6 +283,13 @@ int readscreen(screencap_t *img, int colors[NUM_DOTS], coord_t coords[NUM_DOTS])
     return 0;
 }
 
+int read_play_again_screen(screencap_t *img, coord_t *coord) {
+    int bottom_edge = find_edge(img, BOTTOM, img->width / 2);
+    coord->x = img->width / 2;
+    coord->y = bottom_edge + (img->height - bottom_edge) / 2;
+    return 0;
+}
+
 
 int main() {
     int colors[NUM_DOTS];
@@ -296,7 +303,18 @@ int main() {
 
     screencap_t img;
     open_screencap(filename, &img);
-    int ret = readscreen(&img, colors, coords);
+
+    int ret;
+    ret = readscreen(&img, colors, coords);
+    if (ret < 0) {
+        coord_t coord;
+        read_play_again_screen(&img, &coord);
+        pixel_t color = get_pixel(&img, coord.x, coord.y);
+        printf("(%d, %d) %x ", coord.x, coord.y, color.value);
+        printf("red: %x, green: %x, blue: %x hue: %d\n", color.rgba.r, color.rgba.g, color.rgba.b, get_color(color));
+        return 1;
+    }
+
     close_screencap(&img);
 
     if (unlink(filename) != 0) {

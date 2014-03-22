@@ -29,10 +29,10 @@
 typedef enum {
     EMPTY = -1,
     RED,
-    GREEN,
     YELLOW,
-    PURPLE,
+    GREEN,
     BLUE,
+    PURPLE,
     NUM_COLORS
 } color_t;
 

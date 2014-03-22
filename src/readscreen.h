@@ -15,8 +15,8 @@
 
 typedef struct {
     unsigned char r;
-    unsigned char b;
     unsigned char g;
+    unsigned char b;
     unsigned char a;
 } rgba_8888_t;
 
@@ -64,7 +64,7 @@ pixel_t get_pixel(screencap_t *img, int x, int y);
 double get_hue(pixel_t c);
 color_t get_color(pixel_t c);
 
-int search_for_edge(screencap_t *img, edge_t edge, int other_coord);
+int find_edge(screencap_t *img, edge_t edge, int other_coord);
 int get_offsets(screencap_t *img, edge_t e, bounds_t *bnds, int offs[GRID_DIM]);
 
 int readscreen(screencap_t *img, int colors[NUM_DOTS], coord_t coords[NUM_DOTS]);
