@@ -14,9 +14,12 @@ default: all
 
 all: $(BIN)/DotBot $(BIN)/readscreen $(BIN)/sendevents
 
-$(BIN)/DotBot: $(SRC)/DotBot.c dots.o cycles.o cycles.o vector.o set.o
+$(BIN)/DotBot: $(SRC)/DotBot.c moves.o dots.o cycles.o cycles.o vector.o set.o
 	$(MKDIR) $(BIN)
 	$(CC) $(CFLAGS) -o $@ $^
+
+moves.o: $(SRC)/moves.c $(SRC)/moves.h
+	$(CC) $(CFLAGS) -c $<
 
 dots.o: $(SRC)/dots.c $(SRC)/dots.h $(SRC)/litcycles.h
 	$(CC) $(CFLAGS) -c $<
