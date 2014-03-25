@@ -12,9 +12,13 @@ BIN = bin
 
 default: all
 
-all: $(BIN)/DotBot $(BIN)/readscreen $(BIN)/sendevents
+all: $(BIN)/DotBot $(BIN)/simulator $(BIN)/readscreen $(BIN)/sendevents
 
-$(BIN)/DotBot: $(SRC)/DotBot.c moves.o dots.o cycles.o cycles.o vector.o set.o
+$(BIN)/DotBot: $(SRC)/DotBot.c moves.o dots.o cycles.o vector.o set.o
+	$(MKDIR) $(BIN)
+	$(CC) $(CFLAGS) -o $@ $^
+
+$(BIN)/simulator: $(SRC)/simulator.c emu.o moves.o dots.o cycles.o vector.o set.o
 	$(MKDIR) $(BIN)
 	$(CC) $(CFLAGS) -o $@ $^
 
