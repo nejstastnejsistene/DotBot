@@ -55,14 +55,6 @@ void close_screencap(screencap_t *img) {
 }
 
 
-int IS_BG(screencap_t *img, int x, int y) {
-    pixel_t pixel = get_pixel(img, x, y);
-    return abs(pixel.rgba.r - pixel.rgba.g) < 10 &&
-           abs(pixel.rgba.g - pixel.rgba.b) < 10 &&
-           abs(pixel.rgba.b - pixel.rgba.r) < 10;
-}
-
-
 pixel_t get_pixel(screencap_t *img, int x, int y) {
     rgba_t pixel = { 0, 0, 0, 0 };
 
@@ -101,6 +93,13 @@ pixel_t get_pixel(screencap_t *img, int x, int y) {
 
     /* Return the uninitialized pixel if the format is unknown. */
     return (pixel_t)pixel;
+}
+
+
+int is_bg(pixel_t pixel) {
+    return abs(pixel.rgba.r - pixel.rgba.g) < 10 &&
+           abs(pixel.rgba.g - pixel.rgba.b) < 10 &&
+           abs(pixel.rgba.b - pixel.rgba.r) < 10;
 }
 
 
@@ -274,11 +273,11 @@ int readscreen(screencap_t *img, int colors[NUM_DOTS], coord_t coords[NUM_DOTS])
             /* If the pixel where we are expecting a dot is white,
              * the dots are probably not done falling yet.
              */
-            if (IS_BG(img, xs[c], ys[r])) {
+            pixel_t dot = get_pixel(img, xs[c], ys[r]);
+            if (is_bg(dot)) {
                 return -1;
             }
 
-            pixel_t dot = get_pixel(img, xs[c], ys[r]);
             colors[POINT(r, c)]= get_color(dot);
             coords[POINT(r, c)].x = xs[c];
             coords[POINT(r, c)].y = ys[r];
@@ -299,23 +298,21 @@ int read_play_again_screen(screencap_t *img, coord_t *coord) {
     return (color == BLUE || color == GREEN) ? 0 : -1;
 }
 
+int read_advert_screen(screencap_t *img, coord_t *coord) {
+    coord->x = 3 * img->width / 4;
+    coord->y = img->height;
+    while (coord->y > 0.75*img->height && IS_BG(img, coord->x, --coord->y));
+    pixel_t pixel = get_pixel(img, coord->x, coord->y);
+    return (!is_bg(pixel) && get_color(pixel) == RED) ? 0 : -1;
+}
 
+/* Advert, high scores, badges, play again. */
 int read_alert_screen(screencap_t *img, coord_t *coord) {
-    int bottom_edge = find_edge(img, BOTTOM, img->width / 4);
-    if (bottom_edge < img->height / 2) {
-        return -1;
-    }
-    int x, y = bottom_edge;
-    while (!IS_BLACK(img, 0, ++y)) {
-        for (x = img->width / 4; x < img->width / 2; x++) {
-            if (IS_BLACK(img, x, y)) {
-                coord->x = img->width / 2;
-                coord->y = y;
-                return 0;
-            }
-        }
-    }
-    return -1;
+    coord->x = img->width / 2;
+    coord->y = img->height;
+    while (coord->y > 0.75*img->height && IS_BG(img, coord->x, --coord->y));
+    pixel_t pixel = get_pixel(img, coord->x, coord->y);
+    return (!is_bg(pixel) && get_color(pixel) == GREEN) ? 0 : -1;
 }
 
 
@@ -337,7 +334,7 @@ int main() {
     if (ret < 0) {
         coord_t coord;
 
-        ret = read_play_again_screen(&img, &coord);
+        ret = read_advert_screen(&img, &coord);
         if (ret == 0) {
             screen_conf_t conf;
             get_touchscreen(&conf);
@@ -347,6 +344,7 @@ int main() {
             return 0;
         }
 
+        ret = read_alert_screen(&img, &coord);
         ret = read_alert_screen(&img, &coord);
         if (ret == 0) {
             screen_conf_t conf;

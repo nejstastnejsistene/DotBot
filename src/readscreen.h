@@ -7,12 +7,6 @@
 #define PIXEL_FORMAT_RGB_888 3
 #define PIXEL_FORMAT_RGB_565 4
 
-#define RGB_MASK 0xffffff
-#define BLACK 0x000000
-#define COLOR_EQ(c, x) (((c).value & RGB_MASK) == (x))
-#define IS_BLACK(img, x, y) COLOR_EQ(get_pixel((img), (x) , (y)), BLACK)
-
-
 typedef struct {
     unsigned char r;
     unsigned char g;
@@ -53,6 +47,9 @@ typedef enum { LEFT, RIGHT, TOP, BOTTOM } edge_t;
 void open_screencap(const char *filename, screencap_t *img);
 void close_screencap(screencap_t *img);
 pixel_t get_pixel(screencap_t *img, int x, int y);
+
+#define IS_BG(img, x, y) (is_bg(get_pixel(img, x, y)))
+int is_bg(pixel_t pixel);
 
 double get_hue(pixel_t c);
 color_t get_color(pixel_t c);
