@@ -5,7 +5,7 @@
 #include "moves.h"
 #include "emu.h"
 
-#define NUM_TURNS 35
+#define NUM_TURNS 45
 
 int main(int argc, char **argv) {
 
@@ -31,7 +31,7 @@ int main(int argc, char **argv) {
         get_translation(&board, cache, move, &result);
         score += result.score;
         printf("%3d", score);
-        printf("%s", turns_remaining > 1 ? ", " : "\n");
+        printf("%s", turns_remaining > 1 ? " " : "\n");
 
         memcpy(&board, &result.board, sizeof(board));
 
