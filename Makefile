@@ -58,6 +58,9 @@ $(BIN)/sendevents: $(SRC)/sendevents.c conf.o monkey.o
 	$(ARM_CC) $(ARM_CFLAGS) -o $@ $^
 	adb push $@ /data/local/DotBot/.
 
+d: data.c data.h
+	$(CC) -o $@ $<
+
 clean:
 	rm -rf $(SRC)/litcycles.h *.o $(BIN) dotbot/*.pyc
 
