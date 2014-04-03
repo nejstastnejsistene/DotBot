@@ -96,6 +96,13 @@ pixel_t get_pixel(screencap_t *img, int x, int y) {
 }
 
 
+int is_bg(pixel_t pixel) {
+    return abs(pixel.rgba.r - pixel.rgba.g) < 10 &&
+           abs(pixel.rgba.g - pixel.rgba.b) < 10 &&
+           abs(pixel.rgba.b - pixel.rgba.r) < 10;
+}
+
+
 double get_hue(pixel_t c) {
     unsigned char r, g, b;
     double x;
@@ -104,10 +111,9 @@ double get_hue(pixel_t c) {
     b = c.rgba.b;
     x = atan2(sqrt(3) * (g - b), 2 * r - g - b);
     if (x < 0) {
-        return -x;
-    } else {
-        return 2 * M_PI - x;
+        x += 2 * M_PI;
     }
+    return x;
 }
 
 
@@ -144,7 +150,7 @@ int find_edge(screencap_t *img, edge_t edge, int other_coord) {
         a = (lo + hi) / 2;
 
         /* Is the current midpoint in the white area? */
-        in_bounds = h ? IS_WHITE(img, a, b) : IS_WHITE(img, b, a);
+        in_bounds = h ? IS_BG(img, a, b) : IS_BG(img, b, a);
         if (in_bounds) {
 
             /* If the current midpoint is in the white area, and its
@@ -152,7 +158,7 @@ int find_edge(screencap_t *img, edge_t edge, int other_coord) {
              * the edge pixel.
              */
             neighbor_in_bounds =
-                h ? IS_WHITE(img, a + dir, b) : IS_WHITE(img, b, a + dir);
+                h ? IS_BG(img, a + dir, b) : IS_BG(img, b, a + dir);
             if (!neighbor_in_bounds) {
                 return a;
 
@@ -176,6 +182,19 @@ int find_edge(screencap_t *img, edge_t edge, int other_coord) {
     return -1;
 }
 
+int foo(screencap_t *img, edge_t e, int *a, int *b) {
+    int a_max = (e == TOP) ? img->width / 4 : img->height / 2;
+    int b_max = (e == TOP) ? img->height / 2 : img->width / 4;
+    for (*a = 0; *a < a_max; (*a)++) {
+        for (*b = 0; *b < b_max; (*b)++) {
+            if ((e == TOP && !IS_BG(img, *a, *b)) ||
+                        (e == LEFT && !IS_BG(img, *b, *a))) {
+                return 1;
+            }
+        }
+    }
+    return 0;
+}
 
 /* Finds the offsets of rows or columns of dots within `bnds`. For the
  * TOP edge, it finds the center of each row of dots in terms of their
@@ -183,7 +202,7 @@ int find_edge(screencap_t *img, edge_t edge, int other_coord) {
  * coordinates of the center of each column. Returns 0 for success and
  * -1 for failure.
  */
-int get_offsets(screencap_t *img, edge_t e, bounds_t *bnds, int offs[6]) {
+int get_offsets(screencap_t *img, edge_t e, int offs[6]) {
 
     /* Only use this function on the top or left edges. */
     if (!(e == TOP || e == LEFT)) {
@@ -191,23 +210,15 @@ int get_offsets(screencap_t *img, edge_t e, bounds_t *bnds, int offs[6]) {
         return -1;
     }
 
-    /* Shoot out at a 45 degree angle from the corner of the boundary
-     * to find the start of the top left dot. This assumes that the
-     * playing area is approximately square.
-     */
-    int i;
-    for (i = 0; i <= bnds->x1 - bnds->x0; i++) {
-        if (!IS_WHITE(img, bnds->x0 + i, bnds->y0 + i)) {
-            break;
-        }
-    }
-
     /* Get our coordinates straight: `a` is the one that's changing, and
      * `b` is fixed.
      */
-    int a = ((e == TOP) ? bnds->x0 : bnds->y0) + i;
-    int b = ((e == TOP) ? bnds->y0 : bnds->x0) + i;
+    int a, b;
+    if (!foo(img, e, &a, &b)) {
+        return -1; 
+    }
 
+    int i;
     for (i = 0; i < GRID_DIM; i++) {
         
         /* At the beginning of this loop, we should be at the beginning
@@ -217,9 +228,9 @@ int get_offsets(screencap_t *img, edge_t e, bounds_t *bnds, int offs[6]) {
 
         /* Move to the end of the dot. */
         if (e == TOP) {
-            while (a < bnds->x1 && !IS_WHITE(img, ++a, b));
+            while (a < img->width && !IS_BG(img, ++a, b));
         } else {
-            while (a < bnds->y1 && !IS_WHITE(img, b, ++a));
+            while (a < img->height && !IS_BG(img, b, ++a));
         }
 
         /* Take the mean of the beginning and end of the dot to get
@@ -238,9 +249,9 @@ int get_offsets(screencap_t *img, edge_t e, bounds_t *bnds, int offs[6]) {
          */
         if (i < 5) {
             if (e == TOP) {
-                while (a < bnds->x1 && IS_WHITE(img, ++a, b));
+                while (a < img->width && IS_BG(img, ++a, b));
             } else {
-                while (a < bnds->y1 && IS_WHITE(img, b, ++a));
+                while (a < img->height && IS_BG(img, b, ++a));
             }
         }
     }
@@ -251,19 +262,9 @@ int get_offsets(screencap_t *img, edge_t e, bounds_t *bnds, int offs[6]) {
 
 
 int readscreen(screencap_t *img, int colors[NUM_DOTS], coord_t coords[NUM_DOTS]) {
-    bounds_t bounds;
-    bounds.x0 = find_edge(img, LEFT,   img->height / 2);
-    bounds.y0 = find_edge(img, TOP,    bounds.x0);
-    bounds.x1 = find_edge(img, RIGHT,  img->height / 2);
-    bounds.y1 = find_edge(img, BOTTOM, bounds.x1);
-
-    if (bounds.x0 < 0 || bounds.y0 < 0 || bounds.x1 < 0 || bounds.y1 < 0) {
-        return -1;
-    }
-
     int xs[NUM_COLS], ys[NUM_ROWS];
-    if (get_offsets(img, TOP,   &bounds, xs) < 0) return -1;
-    if (get_offsets(img, LEFT,  &bounds, ys) < 0) return -1;
+    if (get_offsets(img, TOP,   xs) < 0) return -1;
+    if (get_offsets(img, LEFT,  ys) < 0) return -1;
 
     int r, c;
     for (c = 0; c < NUM_COLS; c++) {
@@ -273,7 +274,7 @@ int readscreen(screencap_t *img, int colors[NUM_DOTS], coord_t coords[NUM_DOTS])
              * the dots are probably not done falling yet.
              */
             pixel_t dot = get_pixel(img, xs[c], ys[r]);
-            if (COLOR_EQ(dot, WHITE)) {
+            if (is_bg(dot)) {
                 return -1;
             }
 
@@ -297,23 +298,21 @@ int read_play_again_screen(screencap_t *img, coord_t *coord) {
     return (color == BLUE || color == GREEN) ? 0 : -1;
 }
 
+int read_advert_screen(screencap_t *img, coord_t *coord) {
+    coord->x = 3 * img->width / 4;
+    coord->y = img->height;
+    while (coord->y > 0.75*img->height && IS_BG(img, coord->x, --coord->y));
+    pixel_t pixel = get_pixel(img, coord->x, coord->y);
+    return (!is_bg(pixel) && get_color(pixel) == RED) ? 0 : -1;
+}
 
+/* Advert, high scores, badges, play again. */
 int read_alert_screen(screencap_t *img, coord_t *coord) {
-    int bottom_edge = find_edge(img, BOTTOM, img->width / 4);
-    if (bottom_edge < img->height / 2) {
-        return -1;
-    }
-    int x, y = bottom_edge;
-    while (!IS_BLACK(img, 0, ++y)) {
-        for (x = img->width / 4; x < img->width / 2; x++) {
-            if (IS_BLACK(img, x, y)) {
-                coord->x = img->width / 2;
-                coord->y = y;
-                return 0;
-            }
-        }
-    }
-    return -1;
+    coord->x = img->width / 2;
+    coord->y = img->height;
+    while (coord->y > 0.75*img->height && IS_BG(img, coord->x, --coord->y));
+    pixel_t pixel = get_pixel(img, coord->x, coord->y);
+    return (!is_bg(pixel) && get_color(pixel) == GREEN) ? 0 : -1;
 }
 
 
@@ -335,7 +334,7 @@ int main() {
     if (ret < 0) {
         coord_t coord;
 
-        ret = read_play_again_screen(&img, &coord);
+        ret = read_advert_screen(&img, &coord);
         if (ret == 0) {
             screen_conf_t conf;
             get_touchscreen(&conf);
@@ -345,6 +344,7 @@ int main() {
             return 0;
         }
 
+        ret = read_alert_screen(&img, &coord);
         ret = read_alert_screen(&img, &coord);
         if (ret == 0) {
             screen_conf_t conf;
