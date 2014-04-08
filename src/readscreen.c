@@ -1,3 +1,4 @@
+#include <errno.h>
 #include <fcntl.h>
 #include <math.h>
 #include <stdio.h>
@@ -261,10 +262,9 @@ int get_offsets(screencap_t *img, edge_t e, int offs[6]) {
 }
 
 
-int readscreen(screencap_t *img, int colors[NUM_DOTS], coord_t coords[NUM_DOTS]) {
-    int xs[NUM_COLS], ys[NUM_ROWS];
-    if (get_offsets(img, TOP,   xs) < 0) return -1;
-    if (get_offsets(img, LEFT,  ys) < 0) return -1;
+int readscreen(screencap_t *img, int colors[NUM_DOTS], int rows[NUM_ROWS], int cols[NUM_COLS]) {
+    if (get_offsets(img, LEFT,  rows) < 0) return -1;
+    if (get_offsets(img, TOP,   cols) < 0) return -1;
 
     int r, c;
     for (c = 0; c < NUM_COLS; c++) {
@@ -273,14 +273,12 @@ int readscreen(screencap_t *img, int colors[NUM_DOTS], coord_t coords[NUM_DOTS])
             /* If the pixel where we are expecting a dot is white,
              * the dots are probably not done falling yet.
              */
-            pixel_t dot = get_pixel(img, xs[c], ys[r]);
+            pixel_t dot = get_pixel(img, cols[c], rows[r]);
             if (is_bg(dot)) {
                 return -1;
             }
 
             colors[POINT(r, c)]= get_color(dot);
-            coords[POINT(r, c)].x = xs[c];
-            coords[POINT(r, c)].y = ys[r];
         }
     }
 
@@ -318,7 +316,8 @@ int read_alert_screen(screencap_t *img, coord_t *coord) {
 
 int main() {
     int colors[NUM_DOTS];
-    coord_t coords[NUM_DOTS];
+    int rows[NUM_ROWS];
+    int cols[NUM_COLS];
 
     const char *filename = "/data/local/DotBot/screenshot.raw";
     if (screencap(filename) != 0) {
@@ -330,7 +329,7 @@ int main() {
     open_screencap(filename, &img);
 
     int ret;
-    ret = readscreen(&img, colors, coords);
+    ret = readscreen(&img, colors, rows, cols);
     if (ret < 0) {
         coord_t coord;
 
@@ -359,28 +358,45 @@ int main() {
     close_screencap(&img);
 
     if (unlink(filename) != 0) {
-        perror("unlink");    
+        fprintf(stderr, "{ \"error\": \"%s\" }\n", strerror(errno));
         return 1;
     }
 
     if (ret < 0) {
-        fprintf(stderr, "unable to read screen\n");
+        fprintf(stderr, "{ \"error\": \"unable to read screen\" }\n");
         return 1; 
     }
 
     int r, c;
-    for (c = 0; c < NUM_COLS; c++) {
-        for (r = 0; r < NUM_ROWS; r++) {
-            printf("%d ", colors[NUM_ROWS*c+r]);
+    printf("{\n");
+    printf("    \"dots_grid\": {\n");
+    printf("        \"colors\": [");
+    for (r = 0; r < NUM_ROWS; r++) {
+        if (r != 0) printf(",\n                   ");
+        printf("[");
+        for (c = 0; c < NUM_ROWS; c++) {
+            if (c != 0) printf(", ");
+            printf("%d", colors[NUM_ROWS*c+r]);
         }
+        printf("]");
     }
-    printf("\n");
+    printf("],\n");
+
+    printf("        \"rows\": [");
+    for (r = 0; r < NUM_ROWS; r++) {
+        if (r != 0) printf(", ");
+        printf("%d", rows[r]);
+    }
+    printf("],\n");
+
+    printf("        \"cols\": [");
     for (c = 0; c < NUM_COLS; c++) {
-        for (r = 0; r < NUM_ROWS; r++) {
-            coord_t coord = coords[POINT(r, c)];
-            printf("%d %d\n", coord.x, coord.y);
-        }
+        if (c != 0) printf(", ");
+        printf("%d", cols[c]);
     }
+    printf("]\n");
+    printf("    }\n");
+    printf("}\n");
 
     return 0;
 }

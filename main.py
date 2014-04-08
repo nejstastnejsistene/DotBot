@@ -47,28 +47,32 @@ def get_path(has_cycle, bitmap):
         yield path[0]
 
 
-def DotBot(colors, coords):
+def DotBot(colors, rows, cols):
     p = Popen(['bin/DotBot', '-'], stdin=PIPE, stdout=PIPE, stderr=PIPE)
-    out, err = p.communicate(colors)
+    import itertools
+    new_colors = []
+    for c in range(6):
+        for r in range(6):
+            new_colors.append(colors[r][c])
+    out, err = p.communicate(' '.join(map(str, new_colors)))
     retcode = p.wait()
     if retcode != 0:
         raise exception, err
-    coords = [map(int, colors.split()) for colors in coords.split('\n')]
     for r, c in get_path(*map(eval, out.split())):
-        yield coords[6 * c + r]
+        yield cols[c], rows[r]
 
 
 if __name__ == '__main__':
-    output = getoutput('adb shell /data/local/DotBot/readscreen')
-    try:
-        colors, coords = output.split('\n', 1)
-        with tempfile.NamedTemporaryFile() as f:
-            for x, y in DotBot(colors, coords):
-                f.write('{} {}\n'.format(x, y))
-            f.flush()
-            getoutput('adb push {} /data/local/DotBot/paths.txt'.format(f.name))
-            getoutput('adb shell "/data/local/DotBot/sendevents < /data/local/DotBot/paths.txt"')
-    except:
-        if output:
-            print >> sys.stderr, output
+    import json
+    output = json.loads(getoutput('adb shell /data/local/DotBot/readscreen'))
+    if 'dots_grid' not in output:
+        print >> sys.stderr, 'error:', output
         sys.exit(1)
+    dg = output['dots_grid']
+    colors, rows, cols = dg['colors'], dg['rows'], dg['cols']
+    with tempfile.NamedTemporaryFile() as f:
+        for x, y in DotBot(colors, rows, cols):
+            f.write('{} {}\n'.format(x, y))
+        f.flush()
+        getoutput('adb push {} /data/local/DotBot/paths.txt'.format(f.name))
+        getoutput('adb shell "/data/local/DotBot/sendevents < /data/local/DotBot/paths.txt"')

@@ -57,6 +57,6 @@ color_t get_color(pixel_t c);
 int find_edge(screencap_t *img, edge_t edge, int other_coord);
 int get_offsets(screencap_t *img, edge_t e, int offs[GRID_DIM]);
 
-int readscreen(screencap_t *img, int colors[NUM_DOTS], coord_t coords[NUM_DOTS]);
+int readscreen(screencap_t *img, int colors[NUM_DOTS], int rows[NUM_ROWS], int cols[NUM_COLS]);
 
 #endif // READSCREEN_H
