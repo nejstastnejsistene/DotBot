@@ -2,6 +2,7 @@ package com.thedotbot;
 
 import android.app.Service;
 import android.content.Intent;
+import android.os.Handler;
 import android.os.IBinder;
 import android.util.Log;
 import android.widget.Toast;
@@ -10,7 +11,8 @@ public class DaemonService extends Service {
 
 	public static final String TAG = "DaemonService";
 	
-	private boolean running;
+	private Daemon daemon;
+	private Handler handler;
 	
 	@Override
 	public IBinder onBind(Intent intent) {
@@ -19,28 +21,39 @@ public class DaemonService extends Service {
 	
 	@Override
 	public void onCreate() {
-		running = false;
+		daemon = new Daemon(this);
+		handler = new Handler();
 	}
 	
 	@Override
 	public void onStart(Intent intent, int startId) {
-		if (running) {
-			Toast.makeText(getApplicationContext(), "Daemon is already running!", Toast.LENGTH_SHORT).show();
+		if (daemon.isRunning()) {
+			info("Daemon is already running!");
 			return;
 		}
-		running = true;
-		Log.i(TAG, "Daemon started.");
-		Toast.makeText(getApplicationContext(), "Daemon started.", Toast.LENGTH_SHORT).show();
-		
-		// Game loop here 
+		info("Daemon started.");
+		new Thread(daemon).start();
 	}
 
 	
 	@Override
 	public void onDestroy() {
-		running = false;
-		Log.i(TAG, "Daemon stopped.");
-		Toast.makeText(getApplicationContext(), "Daemon stopped.", Toast.LENGTH_SHORT).show();
+		daemon.stop();
+		info("Daemon stopped.");
+	}
+	
+	private void info(String message) {
+		info(TAG, message);
+	}
+	
+	public void info(final String tag, final String message) {
+		final DaemonService service = this;
+		handler.post(new Runnable() {
+			public void run() {
+				Log.i(tag, message);
+				Toast.makeText(service, message, Toast.LENGTH_SHORT).show();
+			}
+		});
 	}
 
 }
