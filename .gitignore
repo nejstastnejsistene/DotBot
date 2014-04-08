@@ -3,3 +3,5 @@ src/litcycles.h
 bin
 *.pyc
 *.plist
+data
+.metadata
