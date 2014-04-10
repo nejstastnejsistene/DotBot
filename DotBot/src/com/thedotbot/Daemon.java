@@ -1,5 +1,8 @@
 package com.thedotbot;
 
+import java.io.File;
+import java.io.IOException;
+
 import android.app.ActivityManager;
 import android.app.ActivityManager.RunningTaskInfo;
 import android.content.Context;
@@ -10,12 +13,17 @@ public class Daemon implements Runnable {
 	public static final String TAG = "Daemon";
 	
 	public static final String DOTS_PACKAGE = "com.nerdyoctopus.gamedots";
+	public static final String SCREENSHOT_FILENAME = "screenshot.raw";
 
 	private DaemonService service;
+	private File screenshotFile;
+	private GameState state;
 	private boolean running;
 	
 	public Daemon(DaemonService service) {
 		this.service = service;
+		screenshotFile = new File(service.getFilesDir(), SCREENSHOT_FILENAME);
+		state = null;
 		running = false;
 	}
 	
@@ -30,17 +38,39 @@ public class Daemon implements Runnable {
 	public void run() {		
 		running = true;
 		while (running) {
-			try {
-				if (!isDotsOpen()) {
-					Log.d(TAG, "Dots not open, sleeping 5 seconds...");
+			if (!isDotsOpen()) {
+				Log.d(TAG, "Dots not open, sleeping 5 seconds...");
+				try {
 					Thread.sleep(5000);
-					continue;
+				} catch (InterruptedException e) {
+					e.printStackTrace();
 				}
-				Log.d(TAG, "Dots is open!");
+				continue;
+			}
+			
+			Log.d(TAG, "Dots is open!");
+			runOnce();
+			
+			try {
 				Thread.sleep(500);
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}
+		}
+	}
+	
+	public void runOnce() {
+		try {
+			Log.d(TAG, "Taking screenshot.");
+			ScreenReader.takeScreenshot(screenshotFile);
+			ScreenInfo info = ScreenReader.readScreen(screenshotFile);
+			Log.d(TAG, "Screen info: " + info.getClass().getName());
+			state = info.next(state);
+		} catch (IOException e) {
+			service.log(TAG, "Unable to take screenshot.", true);
+			e.printStackTrace();
+			stop();
+			return;
 		}
 	}
 	

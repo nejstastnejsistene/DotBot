@@ -28,10 +28,10 @@ public class DaemonService extends Service {
 	@Override
 	public void onStart(Intent intent, int startId) {
 		if (daemon.isRunning()) {
-			info("Daemon is already running!");
+			log(TAG, "Daemon is already running!", false);
 			return;
 		}
-		info("Daemon started.");
+		log(TAG, "Daemon started.", false);
 		new Thread(daemon).start();
 	}
 
@@ -39,18 +39,19 @@ public class DaemonService extends Service {
 	@Override
 	public void onDestroy() {
 		daemon.stop();
-		info("Daemon stopped.");
+		log(TAG, "Daemon stopped.", false);
 	}
 	
-	private void info(String message) {
-		info(TAG, message);
-	}
 	
-	public void info(final String tag, final String message) {
+	public void log(final String tag, final String message, final boolean error) {
 		final DaemonService service = this;
 		handler.post(new Runnable() {
 			public void run() {
-				Log.i(tag, message);
+				if (error) {
+					Log.e(tag, message);
+				} else {
+					Log.i(tag, message);
+				}
 				Toast.makeText(service, message, Toast.LENGTH_SHORT).show();
 			}
 		});
