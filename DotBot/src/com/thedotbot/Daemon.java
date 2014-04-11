@@ -3,6 +3,10 @@ package com.thedotbot;
 import java.io.File;
 import java.io.IOException;
 
+import com.thedotbot.screens.ScreenInfo;
+import com.thedotbot.screens.ScreenReader;
+import com.thedotbot.state.GameState;
+
 import android.app.ActivityManager;
 import android.app.ActivityManager.RunningTaskInfo;
 import android.content.Context;

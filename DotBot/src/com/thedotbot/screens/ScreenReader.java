@@ -1,7 +1,9 @@
-package com.thedotbot;
+package com.thedotbot.screens;
 
 import java.io.File;
 import java.io.IOException;
+
+import com.thedotbot.SuperShell;
 
 public class ScreenReader {
 
