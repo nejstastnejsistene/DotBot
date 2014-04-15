@@ -14,6 +14,10 @@ import android.util.Log;
 
 public class Daemon implements Runnable {
 	
+	static {
+		System.loadLibrary("dotbot");
+	}
+
 	public static final String TAG = "Daemon";
 	
 	public static final String DOTS_PACKAGE = "com.nerdyoctopus.gamedots";

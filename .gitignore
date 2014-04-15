@@ -1,6 +1,8 @@
 src/litcycles.h
 *.o
 bin
+armeabi
+obj
 *.pyc
 *.plist
 data

@@ -15,6 +15,14 @@ public class DotsGridScreen implements ScreenInfo {
 	private Point[][] coords;
 	private Point menu, timeFreeze, expander;
 	
+	public DotsGridScreen(DotColor[][] board, Point[][] coords, Point menu, Point timeFreeze, Point expander) {
+		this.board = board;
+		this.coords = coords;
+		this.menu = menu;
+		this.timeFreeze = timeFreeze;
+		this.expander = expander;
+	}
+
 	public Point getCoord(int row, int col) {
 		return coords[col][row];
 	}
