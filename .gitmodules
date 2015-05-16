@@ -1,0 +1,3 @@
+[submodule "dotbot-go"]
+	path = dotbot-go
+	url = git@github.com:nejstastnejsistene/dotbot-go.git
