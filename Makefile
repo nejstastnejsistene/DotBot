@@ -1,11 +1,13 @@
+LWS_PATH=libwebsockets/lib
+
 CC=gcc
-CFLAGS=-g -Wall -Wextra -pedantic -ansi -O3
+CFLAGS=-g -Wall -O3 -I$(LWS_PATH) -L$(LWS_PATH)
 
-TARGET=DotBot
-OBJECTS=grid.o dots.o
+TARGET=dotbot
+OBJECTS=main.o dots.o grid.o
 
-$(TARGET): main.c $(OBJECTS)
-	$(CC) $(CFLAGS) -o $@ $^
+$(TARGET): $(OBJECTS)
+	$(CC) $(CFLAGS) -o $@ $^ -lwebsockets
 
 %.o: %.c %.h
 	$(CC) $(CFLAGS) -c $<

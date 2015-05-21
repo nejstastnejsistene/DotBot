@@ -61,4 +61,6 @@ char *grid_to_string(grid_t);
 
 void pprint_grid(grid_t);
 
+void fill_grid(grid_t, color_t);
+
 #endif

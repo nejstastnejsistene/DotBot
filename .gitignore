@@ -32,4 +32,5 @@
 *.dSYM/
 
 # DotBot
-DotBot
+dotbot
+libwebsockets

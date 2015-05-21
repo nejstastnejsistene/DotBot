@@ -74,6 +74,7 @@ char *grid_to_string(grid_t grid) {
             s[offset + 1] = FMT_DELIMITER(col);
         }
     }
+    s[FMT_SIZE] = 0;
     return s;
 }
 
@@ -93,4 +94,17 @@ void pprint_grid(grid_t grid) {
         printf("\n");
     }
     printf("\n");
+}
+
+void fill_grid(grid_t grid, color_t exclude) {
+    int col, row;
+    color_t color;
+    for (col = 0; col < NUM_COLS; col++) {
+        for (row = 0; row < NUM_ROWS; row++) {
+            if (GET_COLUMN_COLOR(grid[col], row) == EMPTY) {
+                while ((color = RED + rand() % (VIOLET - RED + 1)) == exclude);
+                grid[col] = SET_COLUMN_COLOR(grid[col], row, color);
+            }
+        }
+    }
 }
