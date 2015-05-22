@@ -1,14 +1,19 @@
 DotBot
 ======
 
-Compile
+Install libwebsockets
 ```
-bin/compile
+git clone git://git.libwebsockets.org/libwebsockets
+cd libwebsockets
+cmake .
+make
+sudo make install
 ```
 
 Run server
 ```
-LD_LIBRARY_PATH=./env/libwebsockets/lib ./dotbot
+make
+./dotbot
 ```
 
 Run web client
