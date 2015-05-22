@@ -14,7 +14,7 @@ static int dotbot_stream_callback(struct libwebsocket_context *context,
         void *user, void *in, size_t len) {
 
     int n, m;
-    unsigned char buf[LWS_SEND_BUFFER_PRE_PADDING + 1024 + LWS_SEND_BUFFER_POST_PADDING];
+    unsigned char buf[LWS_SEND_BUFFER_PRE_PADDING + 512 + LWS_SEND_BUFFER_POST_PADDING];
     unsigned char *p = &buf[LWS_SEND_BUFFER_PRE_PADDING];
     struct per_session_data *data = (struct per_session_data*)user;
 
@@ -126,7 +126,6 @@ int main() {
         }
 
         libwebsocket_service(context, 50);
-        printf("Num connections: %d\n", num_connections);
     }
 
     libwebsocket_context_destroy(context);

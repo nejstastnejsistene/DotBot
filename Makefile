@@ -1,7 +1,9 @@
-LWS_PATH=libwebsockets/lib
+LWS=libwebsockets
+LWS_LIB=$(LWS)/lib
+LWS_SO=$(LWS_LIB)/$(LWS).so
 
 CC=gcc
-CFLAGS=-g -Wall -O3 -I$(LWS_PATH) -L$(LWS_PATH)
+CFLAGS=-g -Wall -O3
 
 TARGET=dotbot
 OBJECTS=main.o dots.o grid.o
@@ -9,8 +11,8 @@ OBJECTS=main.o dots.o grid.o
 $(TARGET): $(OBJECTS)
 	$(CC) $(CFLAGS) -o $@ $^ -lwebsockets
 
-%.o: %.c %.h
+%.o: %.c %.h $(LWS_SO)
 	$(CC) $(CFLAGS) -c $<
 
 clean:
-	rm $(TARGET) $(OBJECTS)
+	rm -rf $(TARGET) $(OBJECTS)

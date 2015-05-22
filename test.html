@@ -1,7 +1,7 @@
 <pre><code id="foo"></code></pre>
 
 <script>
-w = new WebSocket('ws://localhost:7681', 'dotbot-stream');
+w = new WebSocket('ws://localhost:5000', 'dotbot-stream');
 w.onmessage = function (msg) {
     foo.innerHTML = msg.data;
 };

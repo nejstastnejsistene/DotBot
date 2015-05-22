@@ -5,7 +5,7 @@
 
 #include "libwebsockets.h"
 
-#define DEFAULT_PORT 7681
+#define DEFAULT_PORT 5000
 
 static const unsigned int delay_ms = 500;
 
