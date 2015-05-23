@@ -67,6 +67,7 @@ void build_paths(mask_t, visited_t, int, int*, move_list_t, int, int, path_t);
 void get_subpaths(int*, move_list_t, visited_t, int, path_t);
 
 mask_t path_to_mask(path_t, int, int);
+void mask_to_path(mask_t, int*, path_t);
 
 void get_neighbors(mask_t, int, int*, neighbors_t);
 

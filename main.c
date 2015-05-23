@@ -14,7 +14,7 @@ static int dotbot_stream_callback(struct libwebsocket_context *context,
         enum libwebsocket_callback_reasons reason,
         void *user, void *in, size_t len) {
 
-    int n, m;
+    int n = 0, m;
     unsigned char buf[LWS_SEND_BUFFER_PRE_PADDING + 512 + LWS_SEND_BUFFER_POST_PADDING];
     unsigned char *p = &buf[LWS_SEND_BUFFER_PRE_PADDING];
     struct per_session_data *data = (struct per_session_data*)user;
@@ -57,7 +57,52 @@ static void init_session_data(struct per_session_data *data) {
     fill_grid(data->grid, EMPTY);
 }
 
+static void fmt_grid(int *len, char **buf, grid_t grid) {
+    (*buf)[0] = '[';
+    (*buf)[1] = '"';
+    *len += 2;
+    *buf += 2;
+    char *s = grid_to_string(grid);
+    int row = 0, i = 0;
+    while (row < NUM_ROWS) {
+        if (s[i] == '\n') {
+            if (++row < NUM_ROWS) {
+                (*buf)[0] = '"';
+                (*buf)[1] = ',';
+                (*buf)[2] = '"';
+                *len += 3;
+                *buf += 3;
+            }
+        } else if (s[i] != ' ') {
+            (*buf)[0] = s[i];
+            *len += 1;
+            *buf += 1;
+        }
+        i++;
+    }
+    free(s);
+    (*buf)[0] = '"';
+    (*buf)[1] = ']';
+    *len += 2;
+    *buf += 2;
+}
+
+static void fmt_path(int *len, char **buf, int path_length, path_t path) {
+    (*buf)[0] = '[';
+    *len += 1;
+    *buf += 1;
+    int i;
+    for (i = 0; i < path_length; i++) {
+        int n = sprintf(*buf, "[%d,%d],", INDEX_ROW(path[i]), INDEX_COL(path[i]));
+        *len += n;
+        *buf += n;
+    }
+    (*buf)[-1] = ']';
+}
+
 static void tick(int *len, char *buf, struct per_session_data *data) {
+    int path_length = 0;
+    path_t path;
     if (data->first) {
         data->first = 0;
     } else {
@@ -82,11 +127,23 @@ static void tick(int *len, char *buf, struct per_session_data *data) {
         }
         apply_mask(data->grid, move);
         fill_grid(data->grid, EMPTY);
-    }
 
-    char *s = grid_to_string(data->grid);
-    *len = sprintf(buf, "%s", s);
-    free(s);
+        mask_to_path(move, &path_length, path);
+    }
+    int n = sprintf(buf, "{\"grid\":");
+    *len += n;
+    buf += n;
+    fmt_grid(len, &buf, data->grid);
+    if (path_length) {
+        n = sprintf(buf, ",\"path\":");
+        *len += n;
+        buf += n;
+        fmt_path(len, &buf, path_length, path);
+    }
+    buf[0] = '}';
+    *len += 1;
+    buf += 1;
+    buf[0] = 0;
 }
 
 void sighandler() {

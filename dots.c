@@ -195,6 +195,31 @@ mask_t path_to_mask(path_t path, int start, int end) {
     return mask;
 }
 
+void mask_to_path(mask_t mask, int *path_length, path_t path) {
+    int i, start_index = -1, min_neighbors = -1;
+    int num_neighbors;
+    neighbors_t neighbors;
+
+    for (i = 0; i < NUM_DOTS; i++) {
+        if (MASK_CONTAINS(mask, i)) {
+            get_neighbors(mask, i, &num_neighbors, neighbors);
+            if (min_neighbors == -1 || num_neighbors < min_neighbors) {
+                start_index = i;
+                min_neighbors = num_neighbors;
+            }
+        }
+    }
+
+    *path_length = 0;
+    i = start_index;
+    while (mask) {
+        path[(*path_length)++] = i;
+        mask = REMOVE_FROM_MASK(mask, i);
+        get_neighbors(mask, i, &num_neighbors, neighbors);
+        i = neighbors[0];
+    }
+}
+
 /* Count the occupied neighbor dots, i.e. the degree of a node. */
 void get_neighbors(mask_t mask, int i, int *num_neighbors, neighbors_t neighbors) {
     int row = INDEX_ROW(i);

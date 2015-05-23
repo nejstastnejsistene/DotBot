@@ -7,7 +7,7 @@
 
 #define DEFAULT_PORT 5000
 
-static const unsigned int delay_ms = 500;
+static const unsigned int delay_ms = 1000;
 
 static volatile int force_exit = 0;
 static struct libwebsocket_context *context;
