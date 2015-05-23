@@ -1,0 +1,19 @@
+<html>
+    <head>
+        <title>DotBot</title>
+        <link rel="stylesheet" href="demo.css">
+    </head>
+    <body>
+        <div id="dots"></div>
+        <pre><code id="foo"></code></pre>
+
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
+        <script src="demo.js"></script>
+        <script>
+        w = new WebSocket('ws://localhost:5000', 'dotbot-stream');
+        w.onmessage = function (msg) {
+            foo.innerHTML = msg.data;
+        };
+        </script>
+    </body>
+</html>

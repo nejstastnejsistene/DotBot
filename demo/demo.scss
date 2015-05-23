@@ -1,0 +1,29 @@
+#dots {
+    width: 400px;
+    height: 400px;
+    position: relative;
+
+    .dot {
+        $dot-width: 6.125%;
+
+        border-radius: 50%;
+        width: $dot-width;
+        height: $dot-width;
+        position: absolute;
+        
+        transition: top 0.5s cubic-bezier(0.175,0.885,0.32,1.275);
+        
+        @for $i from 0 through 5 {
+            $offset: (($i+1)/7)*100% - $dot-width/2;
+            &.col#{$i} { left: $offset }
+            &.row#{$i} { top:  $offset }
+            &.hidden-row#{$i} { top: -$offset }
+        }
+        
+        &.red    { background: #ef5d42 }
+        &.yellow { background: #e7db29 }
+        &.green  { background: #8ce78c }
+        &.blue   { background: #8cbaff }
+        &.violet { background: #9c5db5 }
+    }
+}

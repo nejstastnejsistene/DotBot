@@ -18,6 +18,7 @@ make
 
 Run web client
 ```
+make -C demo
 python -m SimpleHTTPServer 8000
-# visit http://localhost:8000/test.html in your browser
+# visit http://localhost:8000/demo/demo.html in your browser
 ```
