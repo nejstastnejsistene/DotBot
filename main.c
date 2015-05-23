@@ -29,17 +29,31 @@ static int dotbot_stream_callback(struct libwebsocket_context *context,
         /* Calculate a move, update the board, and send back the results. */
         case LWS_CALLBACK_SERVER_WRITEABLE:
             tick(&n, (char *)p, data);
-            m = libwebsocket_write(wsi, p, n, LWS_WRITE_TEXT);
-            if (m < n) {
-                lwsl_info("client disconnected\n");
-                num_connections--;
-                return -1;
+            if (n) {
+                m = libwebsocket_write(wsi, p, n, LWS_WRITE_TEXT);
+                if (m < n) {
+                    lwsl_info("client disconnected\n");
+                    num_connections--;
+                    return -1;
+                }
             }
             break;
         /* If they send back "reset", restart the game. */
         case LWS_CALLBACK_RECEIVE:
-            if (len >= 5 && strncmp((const char *)in, "reset", len) == 0) {
+            if (len == 5 && strncmp((const char *)in, "start", len) == 0) {
                 init_session_data(data);
+                libwebsocket_callback_on_writable(context, wsi);
+                data->running = 1;
+                break;
+            }
+            if (len == 4 && strncmp((const char *)in, "stop", len) == 0) {
+                data->running = 0;
+                break;
+            }
+            if (len == 5 && strncmp((const char *)in, "reset", len) == 0) {
+                init_session_data(data);
+                libwebsocket_callback_on_writable(context, wsi);
+                break;
             }
             break;
 
@@ -105,6 +119,8 @@ static void tick(int *len, char *buf, struct per_session_data *data) {
     path_t path;
     if (data->first) {
         data->first = 0;
+    } else if (!data->running) {
+        return;
     } else {
         int num_moves;
         move_list_t moves;

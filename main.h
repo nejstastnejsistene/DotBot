@@ -13,6 +13,7 @@ static volatile int force_exit = 0;
 static struct libwebsocket_context *context;
 
 struct per_session_data {
+    int running;
     int first;
     int score;
     grid_t grid;

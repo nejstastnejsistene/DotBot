@@ -41,16 +41,30 @@ dots = undefined
 #, 1000
 
 w = new WebSocket 'ws://localhost:5000', 'dotbot-stream'
+w.onopen = ->
+    w.send 'start'
 w.onmessage = (msg) ->
     {grid, path} = JSON.parse(msg.data)
     grid = ((colors[color] for color in row.split '') for row in grid)
     setTimeout ->
-        if !dots?
-            dots = new Dots(grid)
+        if !path?
+            setTimeout ->
+                dots = new Dots(grid)
+            , 500
         else
             dots.grid = grid
-        if path?
             for [r, c] in path
                 $("#dots .dot.row#{r}.col#{c}").addClass 'marked'
             dots.shrink_marked_dots()
 w.onclose = -> console.log 'socket closed'
+
+$('#start-stop').on 'click', ->
+    if $(@).html() == 'Start'
+        w.send 'start'
+        $(@).html 'Stop'
+    else
+        w.send 'stop'
+        $(@).html 'Start'
+$('#reset').on 'click', ->
+    $('#dots .dot').remove()
+    w.send 'reset'
