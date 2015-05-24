@@ -24,6 +24,7 @@ static int dotbot_stream_callback(struct libwebsocket_context *context,
         case LWS_CALLBACK_ESTABLISHED:
             lwsl_info("dotbot_stream_callback: LWS_CALLBACK_ESTABLISHED\n");
             init_session_data(data);
+            libwebsocket_callback_on_writable(context, wsi);
             num_connections++;
             break;
         /* Calculate a move, update the board, and send back the results. */
@@ -41,8 +42,6 @@ static int dotbot_stream_callback(struct libwebsocket_context *context,
         /* If they send back "reset", restart the game. */
         case LWS_CALLBACK_RECEIVE:
             if (len == 5 && strncmp((const char *)in, "start", len) == 0) {
-                init_session_data(data);
-                libwebsocket_callback_on_writable(context, wsi);
                 data->running = 1;
                 break;
             }
@@ -143,7 +142,6 @@ static void tick(int *len, char *buf, struct per_session_data *data) {
         }
         apply_mask(data->grid, move);
         fill_grid(data->grid, EMPTY);
-
         mask_to_path(move, &path_length, path);
     }
     int n = sprintf(buf, "{\"grid\":");
