@@ -15,6 +15,8 @@ static int dotbot_stream_callback(struct libwebsocket_context *context,
         void *user, void *in, size_t len) {
 
     int n = 0, m;
+    struct timeval tv;
+    long ms;
     unsigned char buf[LWS_SEND_BUFFER_PRE_PADDING + 512 + LWS_SEND_BUFFER_POST_PADDING];
     unsigned char *p = &buf[LWS_SEND_BUFFER_PRE_PADDING];
     struct per_session_data *data = (struct per_session_data*)user;
@@ -29,8 +31,14 @@ static int dotbot_stream_callback(struct libwebsocket_context *context,
             break;
         /* Calculate a move, update the board, and send back the results. */
         case LWS_CALLBACK_SERVER_WRITEABLE:
+            gettimeofday(&tv, NULL);
+            ms = (tv.tv_sec * 1000) + (tv.tv_usec / 1000);
+            if ((ms - data->last_updated) < delay_ms) {
+                break;
+            }
             tick(&n, (char *)p, data);
             if (n) {
+                data->last_updated = ms;
                 m = libwebsocket_write(wsi, p, n, LWS_WRITE_TEXT);
                 if (m < n) {
                     lwsl_info("client disconnected\n");
@@ -184,20 +192,9 @@ int main() {
         return -1;
     }
 
-    unsigned int ms, oldms = 0;
-
-    int n = 0;
-    while (n >= 0 && !force_exit) {
-        struct timeval tv;
-        gettimeofday(&tv, NULL);
-
-        ms = (tv.tv_sec * 1000) + (tv.tv_usec / 1000);
-        if ((ms - oldms) > delay_ms) {
-            libwebsocket_callback_on_writable_all_protocol(&protocols[0]);
-            oldms = ms;
-        }
-
-        libwebsocket_service(context, 50);
+    while (!force_exit) {
+        libwebsocket_callback_on_writable_all_protocol(&protocols[0]);
+        libwebsocket_service(context, timeout_ms);
     }
 
     libwebsocket_context_destroy(context);
