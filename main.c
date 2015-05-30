@@ -15,8 +15,6 @@ static int dotbot_stream_callback(struct libwebsocket_context *context,
         void *user, void *in, size_t len) {
 
     int n = 0, m;
-    struct timeval tv;
-    long ms;
     unsigned char buf[LWS_SEND_BUFFER_PRE_PADDING + 512 + LWS_SEND_BUFFER_POST_PADDING];
     unsigned char *p = &buf[LWS_SEND_BUFFER_PRE_PADDING];
     struct per_session_data *data = (struct per_session_data*)user;
@@ -31,14 +29,8 @@ static int dotbot_stream_callback(struct libwebsocket_context *context,
             break;
         /* Calculate a move, update the board, and send back the results. */
         case LWS_CALLBACK_SERVER_WRITEABLE:
-            gettimeofday(&tv, NULL);
-            ms = (tv.tv_sec * 1000) + (tv.tv_usec / 1000);
-            if ((ms - data->last_updated) < delay_ms) {
-                break;
-            }
             tick(&n, (char *)p, data);
             if (n) {
-                data->last_updated = ms;
                 m = libwebsocket_write(wsi, p, n, LWS_WRITE_TEXT);
                 if (m < n) {
                     lwsl_info("client disconnected\n");
@@ -47,23 +39,6 @@ static int dotbot_stream_callback(struct libwebsocket_context *context,
                 }
             }
             break;
-        /* If they send back "reset", restart the game. */
-        case LWS_CALLBACK_RECEIVE:
-            if (len == 5 && strncmp((const char *)in, "start", len) == 0) {
-                data->running = 1;
-                break;
-            }
-            if (len == 4 && strncmp((const char *)in, "stop", len) == 0) {
-                data->running = 0;
-                break;
-            }
-            if (len == 5 && strncmp((const char *)in, "reset", len) == 0) {
-                init_session_data(data);
-                libwebsocket_callback_on_writable(context, wsi);
-                break;
-            }
-            break;
-
         default:
             break;
     }
@@ -124,11 +99,18 @@ static void fmt_path(int *len, char **buf, int path_length, path_t path) {
 static void tick(int *len, char *buf, struct per_session_data *data) {
     int path_length = 0;
     path_t path;
+    struct timeval tv;
+    long ms;
+
     if (data->first) {
         data->first = 0;
-    } else if (!data->running) {
-        return;
     } else {
+        gettimeofday(&tv, NULL);
+        ms = (tv.tv_sec * 1000) + (tv.tv_usec / 1000);
+        if ((ms - data->last_updated) < delay_ms) {
+            return;
+        }
+        data->last_updated = ms;
         int num_moves;
         move_list_t moves;
         get_moves(data->grid, &num_moves, moves);
