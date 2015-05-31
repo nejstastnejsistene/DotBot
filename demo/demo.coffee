@@ -7,6 +7,7 @@ colors =
 rand_color = -> colors[Object.keys(colors)[Math.floor(Math.random()*5)]]
 
 falling_dots_transition_ms = 250
+segment_transition_ms = 100
 
 class Demo
 
@@ -67,15 +68,10 @@ class Dots
             if path.length > 1
                 [r1, c1] = path[0]
                 [r2, c2] = path[1]
-                @context.append @new_path r1, c1, r2, c2, @grid[r1][c1]
-                setTimeout draw_next_segment.bind(@, path.slice(1)), 100
+                @context.append "<div class='path from-#{r1}-#{c1}-to-#{r2}-#{c2} #{@grid[r1][c1]}'/>"
+                setTimeout draw_next_segment.bind(@, path.slice(1)), segment_transition_ms
             else if path.length == 1
                 setTimeout @shrink_marked_dots.bind(@, new_grid, next), 500
-
-    new_path: (r1, c1, r2, c2, color) ->
-        if r1 > r2 or c1 > c2
-            [r1, c1, r2, c2] = [r2, c2, r1, c1]
-        "<div class='path from-row#{r1} from-col#{c1} to-row#{r2} to-col#{c2} #{color}'/>"
 
     shrink_marked_dots: (@grid, next) ->
         @$('.path').remove()
@@ -83,4 +79,6 @@ class Dots
         @drop_dots next
 
 
-demo = new Demo()
+setTimeout ->
+    demo = new Demo()
+, 500
