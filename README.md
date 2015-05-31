@@ -39,7 +39,7 @@ python -m SimpleHTTPServer 8000
 Automatically compile the coffeescript, including a source map
 
 ```
-cd demo && coffee -wcm demo.js
+cd demo && coffee -wcm demo.coffee
 ```
 
 Automatically compile the scss, including a source map

@@ -23,6 +23,7 @@ class Demo
                 @dots = new Dots data.grid, @update.bind(@)
             else
                 @queue.push data
+                console.log @queue.length
 
     update: ->
         data = @queue.shift()
