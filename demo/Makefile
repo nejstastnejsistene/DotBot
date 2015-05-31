@@ -1,10 +1,11 @@
+
 all: demo.css demo.js
 
 demo.css: demo.scss
-	scss $<:$@
+	scss -t compressed --sourcemap $<:$@
 
 demo.js: demo.coffee
-	coffee -c $<
+	coffee -cm $<
 
 clean:
-	rm demo.css demo.js
+	rm -f demo.css demo.js demo.*.map

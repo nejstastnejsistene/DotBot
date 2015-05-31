@@ -35,4 +35,5 @@
 dotbot
 demo.css
 demo.js
+demo.*.map
 .sass-cache
