@@ -106,9 +106,11 @@ void pprint_grid(grid_t);
 
 void pprint_mask(mask_t, color_t, color_t);
 
+mask_t naive_choose_move(grid_t);
+
 void fill_grid(grid_t, color_t);
 
-void apply_mask(grid_t, mask_t);
+void apply_move(grid_t, mask_t);
 
 void get_moves(grid_t, int*, move_list_t);
 

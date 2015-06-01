@@ -59,10 +59,15 @@ static json_object *json_path(int path_length, path_t path) {
 }
 
 static void tick(int *len, char *buf, struct per_session_data *data) {
-    int path_length = 0;
-    path_t path;
     struct timeval tv;
     long ms;
+
+    mask_t move;
+    int path_length = 0;
+    path_t path;
+
+    json_object *obj;
+    const char *s;
 
     /* If it's a new game, only send the grid and don't compute a move. */
     if (data->new_game) {
@@ -74,37 +79,20 @@ static void tick(int *len, char *buf, struct per_session_data *data) {
             return;
         }
         data->last_updated = ms;
-        int num_moves;
-        move_list_t moves;
-        get_moves(data->grid, &num_moves, moves);
-        /* Naively choose the largest move. */
-        int max_size = -1;
-        mask_t move = EMPTY_MASK;
-        int i;
-        for (i = 0; i < num_moves; i++) {
-            int size = 0;
-            mask_t tmp = moves[i];
-            while (tmp) {
-                tmp ^= tmp & -tmp;
-                size++;
-            }
-            if (size > max_size) {
-                max_size = size;
-                move = moves[i];
-            }
-        }
-        apply_mask(data->grid, move);
+
+        move = naive_choose_move(data->grid);
+        apply_move(data->grid, move);
         fill_grid(data->grid, EMPTY);
         mask_to_path(move, &path_length, path);
     }
 
-    json_object *obj = json_object_new_object();
+    obj = json_object_new_object();
     json_object_object_add(obj, "grid", json_grid(data->grid));
     if (path_length) {
         json_object_object_add(obj, "path", json_path(path_length, path));
     }
 
-    const char *s = json_object_to_json_string(obj);
+    s = json_object_to_json_string(obj);
     *len = strlen(s);
     memcpy(buf, s, *len);
     buf[*len] = 0;
@@ -157,19 +145,26 @@ void sighandler() {
     libwebsocket_cancel_service(context);
 }
 
-static struct libwebsocket_protocols protocols[] = {{
-    "dotbot-stream",
-    dotbot_stream_callback,
-    sizeof(struct per_session_data),
-}, {}};
+static struct libwebsocket_protocols protocols[] = {
+    {
+        "dotbot-stream",
+        dotbot_stream_callback,
+        sizeof(struct per_session_data),
+        0, 0, NULL, NULL, 0
+    },
+
+    {NULL, NULL, 0, 0, 0, NULL, NULL, 0}
+};
 
 int main() {
+	struct lws_context_creation_info info;
+    char *port;
+
     signal(SIGINT, sighandler);
 
-	struct lws_context_creation_info info;
-	memset(&info, 0, sizeof info);
+    port = getenv("PORT");
 
-    char *port = getenv("PORT");
+	memset(&info, 0, sizeof info);
 	info.port = (port == NULL) ? DEFAULT_PORT : atoi(port);
 	info.protocols = protocols;
 	info.extensions = libwebsocket_get_internal_extensions();

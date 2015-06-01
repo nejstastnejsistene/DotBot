@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=-g -Wall -O3
+CFLAGS=-Wall -Wextra -Werror -ansi -pedantic -g -O3
 
 TARGET=dotbot
 

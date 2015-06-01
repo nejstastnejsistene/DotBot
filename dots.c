@@ -5,7 +5,6 @@
 
 #include "dots.h"
 
-
 /* Pretty print a grid using ANSI color codes and unicode dots. */
 void pprint_grid(grid_t grid) {
     int row, col;
@@ -40,6 +39,30 @@ void pprint_mask(mask_t mask, color_t fg, color_t bg) {
     pprint_grid(grid);
 }
 
+/* Naively choose the move with the most dots. */
+mask_t naive_choose_move(grid_t grid) {
+    mask_t tmp, move = EMPTY_MASK;
+    int i, num_dots, max_dots = -1;
+
+    int num_moves;
+    move_list_t moves;
+    get_moves(grid, &num_moves, moves);
+
+    for (i = 0; i < num_moves; i++) {
+        num_dots = 0;
+        tmp = moves[i];
+        while (tmp) {
+            tmp ^= tmp & -tmp;
+            num_dots++;
+        }
+        if (num_dots < max_dots) {
+            max_dots = num_dots;
+            move = moves[i];
+        }
+    }
+    return move;
+}
+
 /* Randomly fill a grid with dots. A color can be excluded to simulate the situation
  * where a square was just completed, so none of that color dot will fall into place.
  * To not exclude any color, provide EMPTY.
@@ -61,7 +84,7 @@ void fill_grid(grid_t grid, color_t exclude) {
 /* Destructively apply a move to a grid by repeatedly shrink the dots from
  * top to bottom.
  */
-void apply_mask(grid_t grid, mask_t move) {
+void apply_move(grid_t grid, mask_t move) {
     int col, row;
     for (col = 0; col < NUM_COLS; col++) {
         for (row = 0; row < NUM_ROWS; row++) {
