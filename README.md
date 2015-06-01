@@ -13,7 +13,7 @@ If you're not running Ubuntu, check out [heroku-buildpack-DotBot](https://github
 ```
 make -C demo
 python -m SimpleHTTPServer 8000
-# visit http://localhost:8000/demo/demo.html in your browser
+# visit http://localhost:8000/demo/ in your browser
 ```
 
 ### Commands to run while developing the demo
@@ -32,11 +32,11 @@ python -m SimpleHTTPServer 8000
 Automatically compile the coffeescript, including a source map
 
 ```
-cd demo && coffee -wcm demo.coffee
+cd demo && coffee -wcm main.coffee
 ```
 
 Automatically compile the scss, including a source map
 
 ```
-cd demo && scss --watch --sourcemap demo.scss:demo.css
+cd demo && scss --watch --sourcemap main.scss:main.css
 ```

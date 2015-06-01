@@ -1,11 +1,11 @@
 
-all: demo.css demo.js
+all: main.css main.js
 
-demo.css: demo.scss
+main.css: main.scss
 	scss -t compressed --sourcemap $<:$@
 
-demo.js: demo.coffee
+main.js: main.coffee
 	coffee -cm $<
 
 clean:
-	rm -f demo.css demo.js demo.*.map
+	rm -rf main.css main.js main.*.map .sass-cache
