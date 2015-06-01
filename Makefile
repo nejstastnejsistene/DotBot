@@ -10,4 +10,4 @@ dots.o: dots.c dots.h
 	$(CC) $(CFLAGS) -c $<
 
 clean:
-	rm -rf $(TARGET) $(OBJECTS)
+	rm -rf $(TARGET) *.o
