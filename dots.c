@@ -55,7 +55,7 @@ mask_t naive_choose_move(grid_t grid) {
             tmp ^= tmp & -tmp;
             num_dots++;
         }
-        if (num_dots < max_dots) {
+        if (num_dots > max_dots) {
             max_dots = num_dots;
             move = moves[i];
         }
