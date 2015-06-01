@@ -1,0 +1,119 @@
+$dot-width: 6.125%;
+$path-width: $dot-width/8;
+
+@function offset($i) {
+    @return ($i + 1) / 7 * 100%;
+}
+
+#dots {
+    width: 800px;
+    height: 800px;
+    position: relative;
+
+    .red    { background: #ef5d42 }
+    .yellow { background: #e7db29 }
+    .green  { background: #8ce78c }
+    .blue   { background: #8cbaff }
+    .violet { background: #9c5db5 }
+
+    .dot {
+
+        border-radius: 50%;
+        width: $dot-width;
+        height: $dot-width;
+        position: absolute;
+        z-index: -1;
+        
+        transition: 0.25s cubic-bezier(0.175,0.885,0.32,1.275);
+        
+        @for $i from 0 through 5 {
+            $offset: offset($i) - $dot-width/2;
+            &.col#{$i} { left: $offset }
+            &.row#{$i} { top:  $offset }
+            &.hidden-row#{5-$i} { top: -$offset }
+        }
+    }
+
+    .path-segment {
+        position: absolute;
+
+        animation-duration: 0.1s;
+        animation-timing-function: linear;
+        animation-fill-mode: forwards;
+
+        @for $r from 0 through 5 {
+            @for $c from 0 through 5 {
+                $left: offset($c) - $path-width/2;
+                $top:  offset($r) - $path-width/2;
+                $near-right:  100% - offset($c)   - $path-width/2;
+                $far-right:   100% - offset($c+1) - $path-width/2;
+                $near-bottom: 100% - offset($r)   - $path-width/2;
+                $far-bottom:  100% - offset($r+1) - $path-width/2;
+
+                // vertically between r and r+1
+                @if $r < 5 {
+                    // top to bottom
+                    &.from-#{$r}-#{$c}-to-#{$r+1}-#{$c} {
+                        left:   $left;
+                        top:    $top;
+                        right:  $near-right;
+                        animation-name: from-#{$r}-#{$c}-to-#{$r+1}-#{$c}
+                    }
+                    // bottom to top
+                    &.from-#{$r+1}-#{$c}-to-#{$r}-#{$c} {
+                        left:   $left;
+                        right:  $near-right;
+                        bottom: $far-bottom;
+                        animation-name: from-#{$r+1}-#{$c}-to-#{$r}-#{$c}
+                    }
+                }
+                // Horizontally, between c and c+1
+                @if $c < 5 {
+                    // left to right
+                    &.from-#{$r}-#{$c}-to-#{$r}-#{$c+1} {
+                        left:   $left;
+                        top:    $top;
+                        bottom: $near-bottom;
+                        animation-name: from-#{$r}-#{$c}-to-#{$r}-#{$c+1}
+                    }
+                    // right to left
+                    &.from-#{$r}-#{$c+1}-to-#{$r}-#{$c} {
+                        top:    $top;
+                        right:  $far-right;
+                        bottom: $near-bottom;
+                        animation-name: from-#{$r}-#{$c+1}-to-#{$r}-#{$c}
+                    }
+                }
+            }
+        }
+    }
+}
+
+@for $r from 0 through 5 {
+    @for $c from 0 through 5 {
+        $left:    offset($c) - $path-width/2;
+        $top:     offset($r) - $path-width/2;
+        $right:   offset($c+1) - $path-width/2;
+        $bottom:  offset($r+1) - $path-width/2;
+        @if $r < 5 {
+            @keyframes from-#{$r}-#{$c}-to-#{$r+1}-#{$c} {
+                from { bottom: 100% - $top }
+                to   { bottom: 100% - $bottom }
+            }
+            @keyframes from-#{$r+1}-#{$c}-to-#{$r}-#{$c} {
+                from { top: $bottom }
+                to   { top: $top }
+            }
+        }
+        @if $c < 5 {
+            @keyframes from-#{$r}-#{$c}-to-#{$r}-#{$c+1} {
+                from { right: 100% - $left }
+                to   { right: 100% - $right }
+            }
+            @keyframes from-#{$r}-#{$c+1}-to-#{$r}-#{$c} {
+                from { left: $right }
+                to   { left: $left }
+            }
+        }
+    }
+}
