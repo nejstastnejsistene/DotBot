@@ -39,6 +39,11 @@ static int dotbot_stream_callback(struct libwebsocket_context *context,
                 }
             }
             break;
+        case LWS_CALLBACK_RECEIVE:
+            if (len == 4 && strncmp((const char *)in, "next", len) == 0) {
+                libwebsocket_callback_on_writable(context, wsi);
+            }
+            break;
         default:
             break;
     }
@@ -107,7 +112,7 @@ static void tick(int *len, char *buf, struct per_session_data *data) {
     } else {
         gettimeofday(&tv, NULL);
         ms = (tv.tv_sec * 1000) + (tv.tv_usec / 1000);
-        if ((ms - data->last_updated) < delay_ms) {
+        if ((ms - data->last_updated) < min_update_interval) {
             return;
         }
         data->last_updated = ms;
@@ -175,8 +180,7 @@ int main() {
     }
 
     while (!force_exit) {
-        libwebsocket_callback_on_writable_all_protocol(&protocols[0]);
-        libwebsocket_service(context, timeout_ms);
+        libwebsocket_service(context, 50);
     }
 
     libwebsocket_context_destroy(context);

@@ -1,3 +1,38 @@
+conf =
+  # The root element's id.
+  rootId: 'dots'
+
+  # Websocket parameters.
+  websocketUrl: 'ws://localhost:5000'
+  websocketProtocol: 'dotbot-stream'
+
+  # Delay in ms before starting.
+  initialDelay: 500
+
+  # How frequently new moves are requested.
+  moveRequestInterval: 500
+
+  # The maximum number of moves that should be queued.
+  targetQueueSize: 20
+
+  # How frequently to check an empty queue for moves.
+  pollingInterval: 50
+
+  # The delay between the previous board finishing animating and beginning
+  # to draw the next move.
+  drawPathDelay: 100
+
+  # How long it takes the dots to fall into place.
+  fallingDotsDuration: 250
+
+  # How long a path segment takes to finish its animation.
+  segmentAnimationDuration: 100
+
+  # How long a completed path is shown before it is released and the dots
+  # are cleared.
+  clearPathDelay: 500
+
+
 colors =
   R: 'red'
   Y: 'yellow'
@@ -5,33 +40,44 @@ colors =
   B: 'blue'
   V: 'violet'
 
-fallingDotsDuration = 250
-segmentAnimationDuration = 100
-finishedPathDelay = 500
-
 
 class Demo
 
-  constructor: (@root) ->
+  constructor: ->
+    @root = document.getElementById conf.rootId
+    @ws = new WebSocket conf.websocketUrl, conf.websocketProtocol
+    @ws.onopen = @onopen.bind @
+    @ws.onclose = @onclose.bind @
+    @ws.onmessage = @onmessage.bind @
     @queue = []
-    @ws = new WebSocket 'ws://localhost:5000', 'dotbot-stream'
-    @ws.onopen = -> console.log 'socket opened'
-    @ws.onclose = -> console.log 'socket closed'
-    @ws.onmessage = (msg) =>
-      data = JSON.parse msg.data
-      data.grid = ((colors[c] for c in row.split '') for row in data.grid)
-      if not data.path?
-        @dots = new Dots root, data.grid, @update.bind(@)
-      else
-        @queue.push data
+
+  onopen: ->
+    @running = true
+    @ws.send 'next'
+    @intervalId = setInterval =>
+        @ws.send 'next' if @running and @queue.length < conf.targetQueueSize
+    , conf.moveRequestInterval
+
+  onclose: ->
+    @running = false
+    clearInterval @intervalId
+    console.log 'socket closed'
+
+  onmessage: (msg) ->
+    data = JSON.parse msg.data
+    data.grid = ((colors[c] for c in row.split '') for row in data.grid)
+    if not data.path?
+      @dots = new Dots @root, data.grid, @update.bind(@)
+    else
+      @queue.push data
 
   update: ->
     if (data = @queue.shift())?
       setTimeout =>
         @dots.drawPath data.path, data.grid, @update.bind(@)
-      , 100
-    else
-      setTimeout @update.bind(@), 50
+      , conf.drawPathDelay
+    else if @running
+      setTimeout @update.bind(@), conf.pollingInterval
 
 
 class Dots
@@ -57,7 +103,7 @@ class Dots
           hiddenRow = 5 - nextRowToFill + r
           @newDot hiddenRow, r, c
     # Wait long enough for the dots to finish falling before continuing.
-    setTimeout next, fallingDotsDuration
+    setTimeout next, conf.fallingDotsDuration
 
   # Create a new dot in the DOM. The dot is created in a "hidden row" above the
   # visibile grid, and is then moved to it's proper place via a nice CSS
@@ -94,10 +140,10 @@ class Dots
         # Schedule the rest of the path to be drawn once the animation finishes.
         setTimeout ->
           drawNextSegment(path.slice 1)
-        , segmentAnimationDuration
+        , conf.segmentAnimationDuration
       # On the last dot, pause for a while and then shrink the dots.
       else if path.length is 1
-        setTimeout @shrinkPath.bind(@, newGrid, next), finishedPathDelay
+        setTimeout @clearPath.bind(@, newGrid, next), conf.clearPathDelay
 
   # Create a path segment between two points. It will animate itself via CSS.
   newPathSegment: ([r1, c1], [r2, c2]) ->
@@ -107,7 +153,7 @@ class Dots
     @root.appendChild segment
 
   # Remove a path and the dots that were affected, then fill in the new dots.
-  shrinkPath: (@grid, next) ->
+  clearPath: (@grid, next) ->
     # Remove all the dots marked by a path, as well as the path.
     elements = @root.getElementsByClassName 'dot marked'
     elements[0].parentNode.removeChild elements[0] while elements[0]
@@ -118,5 +164,5 @@ class Dots
 
 
 setTimeout ->
-  demo = new Demo(document.getElementById 'dots')
-, 500
+  new Demo
+, conf.initialDelay

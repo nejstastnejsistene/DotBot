@@ -7,10 +7,8 @@
 
 #define DEFAULT_PORT 5000
 
-/* How often to update the games. */
-static const unsigned int delay_ms = 1000;
-/* How often to run the callbacks. */
-static const unsigned int timeout_ms = 50;
+/* Minimum amount of time that must pass between game updates. */
+static const unsigned int min_update_interval = 500;
 
 static volatile int force_exit = 0;
 static struct libwebsocket_context *context;
