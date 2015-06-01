@@ -1,20 +1,13 @@
 DotBot
 ======
 
-### Install libwebsockets
+### Install dependencies, build, and run server
 ```
-git clone git://git.libwebsockets.org/libwebsockets
-cd libwebsockets
-cmake .
-make
-sudo make install
-```
-
-### Run server
-```
+sudo apt-get install libwebsockets-dev libjson0-dev
 make
 ./dotbot
 ```
+If you're not running Ubuntu, check out [heroku-buildpack-DotBot](https://github.com/nejstastnejsistene/heroku-buildpack-DotBot) for an idea of how to do this the hard way.
 
 ### Run web client
 ```
