@@ -2,12 +2,11 @@ CC=gcc
 CFLAGS=-g -Wall -O3
 
 TARGET=dotbot
-OBJECTS=dots.o grid.o
 
-$(TARGET): main.c $(OBJECTS)
+$(TARGET): main.c dots.o
 	$(CC) $(CFLAGS) -o $@ $^ -lwebsockets -ljson
 
-%.o: %.c %.h
+dots.o: dots.c dots.h
 	$(CC) $(CFLAGS) -c $<
 
 clean:

@@ -5,6 +5,26 @@
 
 #include "dots.h"
 
+
+/* Pretty print a grid using ANSI color codes and unicode dots. */
+void pprint_grid(grid_t grid) {
+    int row, col;
+    color_t color;
+    for (row = 0; row < NUM_ROWS; row++) {
+        for (col = 0; col < NUM_COLS; col++) {
+            color = GET_COLUMN_COLOR(grid[col], row);
+            if (color == EMPTY) {
+                printf("  ");
+            } else {
+                /* Unicode 0x24cf BLACK CIRCLE surrounded by ANSI color formatting. */
+                printf(" \x1b[%dm\xe2\x97\x8f\x1b[0m", color_codes[color]);
+            }
+        }
+        printf("\n");
+    }
+    printf("\n");
+}
+
 /* Pretty print a mask with a foreground and background color. */
 void pprint_mask(mask_t mask, color_t fg, color_t bg) {
     grid_t grid = {0};
@@ -19,6 +39,24 @@ void pprint_mask(mask_t mask, color_t fg, color_t bg) {
     }
     pprint_grid(grid);
 }
+
+/* Randomly fill a grid with dots. A color can be excluded to simulate the situation
+ * where a square was just completed, so none of that color dot will fall into place.
+ * To not exclude any color, provide EMPTY.
+ */
+void fill_grid(grid_t grid, color_t exclude) {
+    int col, row;
+    color_t color;
+    for (col = 0; col < NUM_COLS; col++) {
+        for (row = 0; row < NUM_ROWS; row++) {
+            if (GET_COLUMN_COLOR(grid[col], row) == EMPTY) {
+                while ((color = RED + rand() % (VIOLET - RED + 1)) == exclude);
+                grid[col] = SET_COLUMN_COLOR(grid[col], row, color);
+            }
+        }
+    }
+}
+
 
 /* Destructively apply a move to a grid by repeatedly shrink the dots from
  * top to bottom.
