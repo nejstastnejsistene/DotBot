@@ -129,9 +129,17 @@ class Dots
 
   # Draw a path through the dots.
   drawPath: (path, newGrid, next) ->
-    # Mark all of the dots in the path so they can be removed later.
-    for [r, c] in path
-      @getDot(r, c).className += ' marked'
+    # If there is a cycle, also mark all dots of that color.
+    if path.length > 1 and "#{path[0]}" == "#{path[path.length-1]}"
+      [r, c] = path[0]
+      color = @grid[r][c]
+      for r in [0..5]
+        for c in [0..5]
+          @getDot(r, c).className += ' marked' if @grid[r][c] == color
+    else
+      # Mark all of the dots in the path so they can be removed later.
+      for [r, c] in path
+        @getDot(r, c).className += ' marked'
     # Recursively draw each path segment.
     do drawNextSegment = (path) =>
       # If there are at least two dots left, draw the next segment.
