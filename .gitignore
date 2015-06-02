@@ -33,7 +33,7 @@
 
 # DotBot
 dotbot
-demo.css
-demo.js
-demo.*.map
+main.css
+main.js
+main.*.map
 .sass-cache
