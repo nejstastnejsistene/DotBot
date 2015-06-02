@@ -39,9 +39,9 @@ void pprint_mask(mask_t mask, color_t fg, color_t bg) {
     pprint_grid(grid);
 }
 
-/* Naively choose the move with the most dots. */
+/* Naively choose the move that will shrink the most dots. */
 mask_t naive_choose_move(grid_t grid) {
-    mask_t tmp, move = EMPTY_MASK;
+    mask_t move = EMPTY_MASK;
     int i, num_dots, max_dots = -1;
 
     int num_moves;
@@ -49,12 +49,9 @@ mask_t naive_choose_move(grid_t grid) {
     get_moves(grid, &num_moves, moves);
 
     for (i = 0; i < num_moves; i++) {
-        num_dots = 0;
-        tmp = moves[i];
-        while (tmp) {
-            tmp ^= tmp & -tmp;
-            num_dots++;
-        }
+        grid_t new_grid;
+        memcpy(new_grid, grid, sizeof(grid_t));
+        num_dots = apply_move(new_grid, moves[i]);
         if (num_dots > max_dots) {
             max_dots = num_dots;
             move = moves[i];
@@ -80,19 +77,28 @@ void fill_grid(grid_t grid, color_t exclude) {
     }
 }
 
-
 /* Destructively apply a move to a grid by repeatedly shrink the dots from
- * top to bottom.
+ * top to bottom. Returns the number of dots that were shrunk.
  */
-void apply_move(grid_t grid, mask_t move) {
-    int col, row;
+int apply_move(grid_t grid, mask_t move) {
+    int col, row, shrink, has_cycle = HAS_CYCLE(move), num_dots = 0;
+    color_t cycle_color;
+    if (has_cycle) {
+        cycle_color = CYCLE_COLOR(move);
+    }
     for (col = 0; col < NUM_COLS; col++) {
         for (row = 0; row < NUM_ROWS; row++) {
-            if (MASK_CONTAINS(move, MASK_INDEX(row, col))) {
+            shrink = MASK_CONTAINS(move, MASK_INDEX(row, col));
+            if (has_cycle) {
+                shrink |= GET_COLUMN_COLOR(grid[col], row) == cycle_color;
+            }
+            if (shrink) {
                 grid[col] = SHRINK_COLUMN(grid[col], row);
+                num_dots++;
             }
         }
     }
+    return num_dots;
 }
 
 /* Get all possible moves that can be made on a grid. Comprimises are made to
@@ -110,6 +116,7 @@ void get_moves(grid_t grid, int *num_moves, move_list_t moves) {
         if (cycles) {
             /*printf("ignoring cycles (for now):\n");
             pprint_mask(cycles, color, EMPTY);*/
+            find_square(cycles, color, num_moves, moves);
         }
         /* DFS on the dots without cycles. */
         if (no_cycles) {
@@ -157,6 +164,21 @@ void separate_cycles(mask_t mask, mask_t *cycles, mask_t *no_cycles) {
                     *no_cycles = ADD_TO_MASK(*no_cycles, i);
                     done = 0;
                 }
+            }
+        }
+    }
+}
+
+#define SQUARE ((mask_t)(3 | (3 << NUM_ROWS)))
+
+void find_square(mask_t mask, color_t color, int *num_moves, move_list_t moves) {
+    int col, row;
+    mask_t square;
+    for (col = 0; col < NUM_COLS - 1; col++) {
+        for (row = 0; row < NUM_ROWS - 1; row++) {
+            square = SQUARE << MASK_INDEX(row, col);
+            if ((mask & square) == square) {
+                moves[(*num_moves)++] = SET_CYCLE(square, color);
             }
         }
     }
@@ -261,6 +283,9 @@ void mask_to_path(mask_t mask, int *path_length, path_t path) {
     int num_neighbors;
     neighbors_t neighbors;
 
+    int has_cycle = HAS_CYCLE(mask);
+    mask = REMOVE_CYCLE_INFO(mask);
+
     for (i = 0; i < NUM_DOTS; i++) {
         if (MASK_CONTAINS(mask, i)) {
             get_neighbors(mask, i, &num_neighbors, neighbors);
@@ -278,6 +303,9 @@ void mask_to_path(mask_t mask, int *path_length, path_t path) {
         mask = REMOVE_FROM_MASK(mask, i);
         get_neighbors(mask, i, &num_neighbors, neighbors);
         i = neighbors[0];
+    }
+    if (has_cycle) {
+        path[(*path_length)++] = path[0];
     }
 }
 

@@ -59,10 +59,6 @@ static json_object *json_path(int path_length, path_t path) {
 }
 
 static void tick(int *len, char *buf, struct per_session_data *data) {
-    struct timeval tv;
-    long ms;
-
-    mask_t move;
     int path_length = 0;
     path_t path;
 
@@ -73,6 +69,10 @@ static void tick(int *len, char *buf, struct per_session_data *data) {
     if (data->new_game) {
         data->new_game = 0;
     } else {
+        struct timeval tv;
+        long ms;
+        mask_t move;
+
         gettimeofday(&tv, NULL);
         ms = (tv.tv_sec * 1000) + (tv.tv_usec / 1000);
         if ((ms - data->last_updated) < MIN_UPDATE_INTERVAL) {
@@ -82,7 +82,7 @@ static void tick(int *len, char *buf, struct per_session_data *data) {
 
         move = naive_choose_move(data->grid);
         apply_move(data->grid, move);
-        fill_grid(data->grid, EMPTY);
+        fill_grid(data->grid, CYCLE_COLOR(move));
         mask_to_path(move, &path_length, path);
     }
 
