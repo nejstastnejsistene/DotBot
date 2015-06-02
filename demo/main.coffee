@@ -64,6 +64,9 @@ new class Demo
 
 class Dots
 
+  # How long it takes the dots to fall into place.
+  fallingDotsDuration: 500
+
   # The delay between the dots falling into place and drawing the next move.
   drawPathDelay: 100
 
@@ -79,13 +82,6 @@ class Dots
   # been shrunk should be removed from the DOM prior to calling this method.
   # The colors for the new dots falling in is determined by looking at @grid.
   dropDots: (next) ->
-    # Keep track of how many dots are currently falling (by calling add() in
-    # @moveDot()) and calling next() after the last one finishes.
-    @fallingDots = new class
-      constructor: (@inProgress = 0) ->
-      add: (dot) ->
-        @inProgress++;
-        dot.addEventListener 'transitionend', => next() if --@inProgress is 0
     for c in [0..5]
       # Drop the dots into place, from the bottom up.
       nextRowToFill = 5
@@ -99,6 +95,7 @@ class Dots
         for r in [0..nextRowToFill]
           hiddenRow = 5 - nextRowToFill + r
           @newDot hiddenRow, r, c
+    setTimeout next, @fallingDotsDuration + @drawPathDelay
 
   # Create a new dot in the DOM. The dot is created in a "hidden row" above the
   # visibile grid, and is then moved to it's proper place via a nice CSS
@@ -122,7 +119,6 @@ class Dots
     # classes so the transition triggers.
     setTimeout =>
       dot.className = dot.className.replace oldRowClass, newRowClass
-      @fallingDots.add dot
 
   # Draw a path through the dots.
   drawPath: (path, newGrid, next) ->
@@ -143,12 +139,16 @@ class Dots
   # ignoreSelected is false) it will mark every dot of the same color
   # as selected.
   selectDot: (dot, ignoreSelected=false) ->
-    if not ignoreSelected and dot.className.includes 'selected'
-      color = dot.dataset.color
-      for r in [0..5]
-        for c in [0..5]
-          if (dot = @getDot r, c).dataset.color == color
-            @selectDot dot, true
+    if dot.className.includes 'selected'
+      if not ignoreSelected
+        # Reselect the current dot.
+        dot.className = dot.className.replace ' selected', ''
+        setTimeout =>
+          color = dot.dataset.color
+          for r in [0..5]
+            for c in [0..5]
+              if (dot = @getDot r, c).dataset.color == color
+                @selectDot dot, true
     else
       dot.className += ' selected'
 
