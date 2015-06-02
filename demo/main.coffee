@@ -79,21 +79,26 @@ class Dots
   # been shrunk should be removed from the DOM prior to calling this method.
   # The colors for the new dots falling in is determined by looking at @grid.
   dropDots: (next) ->
+    # Keep track of how many dots are currently falling (by calling add() in
+    # @moveDot()) and calling next() after the last one finishes.
+    @fallingDots = new class
+      constructor: (@inProgress = 0) ->
+      add: (dot) ->
+        @inProgress++;
+        dot.addEventListener 'transitionend', => next() if --@inProgress is 0
     for c in [0..5]
       # Drop the dots into place, from the bottom up.
       nextRowToFill = 5
       for r in [5..0]
         if (dot = @getDot r, c)?
-          @moveDot dot, "row#{r}", "row#{nextRowToFill--}"
+          if r isnt nextRowToFill
+            @moveDot dot, "row#{r}", "row#{nextRowToFill}"
+          nextRowToFill--
       # Fill in the new dots.
       if nextRowToFill >= 0
         for r in [0..nextRowToFill]
           hiddenRow = 5 - nextRowToFill + r
-          dot = @newDot hiddenRow, r, c
-          # Proceed after the last dots finishes its transition.
-          dot.addEventListener 'transitionend', =>
-            clearTimeout @fallingDotTimeout
-            @fallingDotTimeout = setTimeout next, @drawPathDelay
+          @newDot hiddenRow, r, c
 
   # Create a new dot in the DOM. The dot is created in a "hidden row" above the
   # visibile grid, and is then moved to it's proper place via a nice CSS
@@ -103,7 +108,6 @@ class Dots
     dot.className = "dot hidden-row#{hr} col#{c} #{@grid[r][c]}"
     @root.appendChild dot
     @moveDot dot, "hidden-row#{hr}", "row#{r}"
-    dot
 
   # Retrieve a dot from the DOM based on its row and column.
   getDot: (r, c) ->
@@ -115,8 +119,9 @@ class Dots
     # setTimeout with no delay so that if the element was just created, the
     # runtime will have a moment to create the element before changing the
     # classes so the transition triggers.
-    setTimeout ->
+    setTimeout =>
       dot.className = dot.className.replace oldRowClass, newRowClass
+      @fallingDots.add dot
 
   # Draw a path through the dots.
   drawPath: (path, newGrid, next) ->
