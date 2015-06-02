@@ -44,13 +44,6 @@ typedef column_t grid_t[NUM_COLS];
     (((column) & column_masks[row]) << BITS_PER_COLOR) | \
     ((column) & (column_masks[NUM_ROWS-(row)-1] << COLUMN_OFFSET((row)+1)))
 
-/* Convenience macros for consistently formatting to/from a string. */
-#define FMT_ROW_SIZE            (2 * NUM_COLS)
-#define FMT_SIZE                (NUM_ROWS * FMT_ROW_SIZE)
-#define FMT_OFFSET(row, col)    ((row) * FMT_ROW_SIZE + (col) * 2)
-#define FMT_DELIMITER(col)      (((col) == NUM_COLS - 1) ? '\n' : ' ')
-
-
 /* Column major bitmask for dots. A dot is there when the bit is set, otherwise not.
  * Used for efficient computations on sets of dots.
  */
