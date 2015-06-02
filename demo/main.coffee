@@ -105,7 +105,8 @@ class Dots
   # transition that animates it falling into place.
   newDot: (hr, r, c) ->
     dot = document.createElement 'div'
-    dot.className = "dot hidden-row#{hr} col#{c} #{@grid[r][c]}"
+    dot.className = "dot hidden-row#{hr} col#{c}"
+    dot.dataset.color = @grid[r][c]
     @root.appendChild dot
     @moveDot dot, "hidden-row#{hr}", "row#{r}"
 
@@ -125,19 +126,9 @@ class Dots
 
   # Draw a path through the dots.
   drawPath: (path, newGrid, next) ->
-    # If there is a cycle, also mark all dots of that color.
-    if path.length > 1 and "#{path[0]}" == "#{path[path.length-1]}"
-      [r, c] = path[0]
-      color = @grid[r][c]
-      for r in [0..5]
-        for c in [0..5]
-          @getDot(r, c).className += ' marked' if @grid[r][c] == color
-    else
-      # Mark all of the dots in the path so they can be removed later.
-      for [r, c] in path
-        @getDot(r, c).className += ' marked'
     # Recursively draw each path segment.
     do drawNextSegment = (path) =>
+      @selectDot @getDot(path[0]...)
       # If there are at least two dots left, draw the next segment.
       if path.length > 1
         segment = @newPathSegment path[0], path[1]
@@ -148,18 +139,31 @@ class Dots
       else if path.length is 1
         setTimeout @clearPath.bind(@, newGrid, next), @clearPathDelay
 
+  # Mark the dot as selected. If the dot is already selected (assuming
+  # ignoreSelected is false) it will mark every dot of the same color
+  # as selected.
+  selectDot: (dot, ignoreSelected=false) ->
+    if not ignoreSelected and dot.className.includes 'selected'
+      color = dot.dataset.color
+      for r in [0..5]
+        for c in [0..5]
+          if (dot = @getDot r, c).dataset.color == color
+            @selectDot dot, true
+    else
+      dot.className += ' selected'
+
   # Create a path segment between two points. It will animate itself via CSS.
   newPathSegment: ([r1, c1], [r2, c2]) ->
     segment = document.createElement 'div'
-    segment.className =
-      "path-segment from-#{r1}-#{c1}-to-#{r2}-#{c2} #{@grid[r1][c1]}"
+    segment.className = "path-segment from-#{r1}-#{c1}-to-#{r2}-#{c2}"
+    segment.dataset.color = @grid[r1][c1]
     @root.appendChild segment
     segment
 
   # Remove a path and the dots that were affected, then fill in the new dots.
   clearPath: (@grid, next) ->
-    # Remove all the dots marked by a path, as well as the path.
-    elements = @root.getElementsByClassName 'dot marked'
+    # Remove all the dots selected by a move, as well as the path.
+    elements = @root.getElementsByClassName 'dot selected'
     elements[0].parentNode.removeChild elements[0] while elements[0]
     elements = @root.getElementsByClassName 'path-segment'
     elements[0].parentNode.removeChild elements[0] while elements[0]

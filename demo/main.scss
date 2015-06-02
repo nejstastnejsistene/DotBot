@@ -10,11 +10,11 @@ $path-width: $dot-width/8;
     height: 800px;
     position: relative;
 
-    .red    { background: #ef5d42 }
-    .yellow { background: #e7db29 }
-    .green  { background: #8ce78c }
-    .blue   { background: #8cbaff }
-    .violet { background: #9c5db5 }
+    [data-color=red]    { background: #ef5d42 }
+    [data-color=yellow] { background: #e7db29 }
+    [data-color=green]  { background: #8ce78c }
+    [data-color=blue]   { background: #8cbaff }
+    [data-color=violet] { background: #9c5db5 }
 
     .dot {
 
@@ -31,6 +31,10 @@ $path-width: $dot-width/8;
             &.col#{$i} { left: $offset }
             &.row#{$i} { top:  $offset }
             &.hidden-row#{5-$i} { top: -$offset }
+        }
+
+        &.selected {
+            background: black;
         }
     }
 
