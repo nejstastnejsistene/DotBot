@@ -1,4 +1,5 @@
-conf =
+new class Demo
+
   # The root element's id.
   rootId: 'dots'
 
@@ -18,54 +19,37 @@ conf =
   # How frequently to check an empty queue for moves.
   pollingInterval: 50
 
-  # The delay between the previous board finishing animating and beginning
-  # to draw the next move.
-  drawPathDelay: 100
-
-  # How long it takes the dots to fall into place.
-  fallingDotsDuration: 250
-
-  # How long a path segment takes to finish its animation.
-  segmentAnimationDuration: 100
-
-  # How long a completed path is shown before it is released and the dots
-  # are cleared.
-  clearPathDelay: 500
-
-
-colors =
-  R: 'red'
-  Y: 'yellow'
-  G: 'green'
-  B: 'blue'
-  V: 'violet'
-
-
-class Demo
+  colors:
+    R: 'red'
+    Y: 'yellow'
+    G: 'green'
+    B: 'blue'
+    V: 'violet'
 
   constructor: ->
-    @root = document.getElementById conf.rootId
-    @ws = new WebSocket conf.websocketUrl, conf.websocketProtocol
-    @ws.onopen = @onopen.bind @
-    @ws.onclose = @onclose.bind @
-    @ws.onmessage = @onmessage.bind @
+    @root = document.getElementById @rootId
     @queue = []
+    setTimeout =>
+      @ws = new WebSocket @websocketUrl, @websocketProtocol
+      @ws.onopen = @onopen.bind @
+      @ws.onclose = @onclose.bind @
+      @ws.onmessage = @onmessage.bind @
+    , @initialDelay
 
   onopen: ->
     @running = true
-    @ws.send 'next'
-    @intervalId = setInterval =>
-        @ws.send 'next' if @running and @queue.length < conf.targetQueueSize
-    , conf.moveRequestInterval
+    @updateIntervalId = setInterval =>
+      @ws.send 'next' if @running and @queue.length < @targetQueueSize
+    , @moveRequestInterval
 
   onclose: ->
     @running = false
-    clearInterval @intervalId
+    clearInterval @updateIntervalId
     console.log 'socket closed'
 
   onmessage: (msg) ->
     data = JSON.parse msg.data
-    data.grid = ((colors[c] for c in row.split '') for row in data.grid)
+    data.grid = ((@colors[c] for c in row.split '') for row in data.grid)
     if not data.path?
       @dots = new Dots @root, data.grid, @update.bind(@)
     else
@@ -73,14 +57,18 @@ class Demo
 
   update: ->
     if (data = @queue.shift())?
-      setTimeout =>
-        @dots.drawPath data.path, data.grid, @update.bind(@)
-      , conf.drawPathDelay
+      @dots.drawPath data.path, data.grid, @update.bind(@)
     else if @running
-      setTimeout @update.bind(@), conf.pollingInterval
+      setTimeout @update.bind(@), @pollingInterval
 
 
 class Dots
+
+  # The delay between the dots falling into place and drawing the next move.
+  drawPathDelay: 100
+
+  # How long a completed path is shown before the dots are cleared.
+  clearPathDelay: 500
 
   # Create a dots board in a root element. Calling this calls the dots of
   # the given grid to fall into place.
@@ -101,9 +89,11 @@ class Dots
       if nextRowToFill >= 0
         for r in [0..nextRowToFill]
           hiddenRow = 5 - nextRowToFill + r
-          @newDot hiddenRow, r, c
-    # Wait long enough for the dots to finish falling before continuing.
-    setTimeout next, conf.fallingDotsDuration
+          dot = @newDot hiddenRow, r, c
+          # Proceed after the last dots finishes its transition.
+          dot.addEventListener 'transitionend', =>
+            clearTimeout @fallingDotTimeout
+            @fallingDotTimeout = setTimeout next, @drawPathDelay
 
   # Create a new dot in the DOM. The dot is created in a "hidden row" above the
   # visibile grid, and is then moved to it's proper place via a nice CSS
@@ -113,6 +103,7 @@ class Dots
     dot.className = "dot hidden-row#{hr} col#{c} #{@grid[r][c]}"
     @root.appendChild dot
     @moveDot dot, "hidden-row#{hr}", "row#{r}"
+    dot
 
   # Retrieve a dot from the DOM based on its row and column.
   getDot: (r, c) ->
@@ -144,14 +135,13 @@ class Dots
     do drawNextSegment = (path) =>
       # If there are at least two dots left, draw the next segment.
       if path.length > 1
-        @newPathSegment path[0], path[1]
+        segment = @newPathSegment path[0], path[1]
         # Schedule the rest of the path to be drawn once the animation finishes.
-        setTimeout ->
+        segment.addEventListener 'animationend', ->
           drawNextSegment(path.slice 1)
-        , conf.segmentAnimationDuration
       # On the last dot, pause for a while and then shrink the dots.
       else if path.length is 1
-        setTimeout @clearPath.bind(@, newGrid, next), conf.clearPathDelay
+        setTimeout @clearPath.bind(@, newGrid, next), @clearPathDelay
 
   # Create a path segment between two points. It will animate itself via CSS.
   newPathSegment: ([r1, c1], [r2, c2]) ->
@@ -159,6 +149,7 @@ class Dots
     segment.className =
       "path-segment from-#{r1}-#{c1}-to-#{r2}-#{c2} #{@grid[r1][c1]}"
     @root.appendChild segment
+    segment
 
   # Remove a path and the dots that were affected, then fill in the new dots.
   clearPath: (@grid, next) ->
@@ -169,8 +160,3 @@ class Dots
     elements[0].parentNode.removeChild elements[0] while elements[0]
     # Drop the new dots into place.
     @dropDots next
-
-
-setTimeout ->
-  new Demo
-, conf.initialDelay
