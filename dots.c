@@ -15,7 +15,7 @@ void pprint_grid(grid_t grid) {
             if (color == EMPTY) {
                 printf("  ");
             } else {
-                /* Unicode 0x24cf BLACK CIRCLE surrounded by ANSI color formatting. */
+                /* Unicode 0x25cf BLACK CIRCLE surrounded by ANSI color formatting. */
                 printf(" \x1b[%dm\xe2\x97\x8f\x1b[0m", color_codes[color]);
             }
         }
@@ -143,27 +143,27 @@ mask_t get_color_mask(grid_t grid, color_t color) {
 
 /* Split a mask into a mask with just the cycles, and another mask with the remaining dots. */
 void separate_cycles(mask_t mask, mask_t *cycles, mask_t *no_cycles) {
-    int i, num_neighbors, done = 0;
-    neighbors_t neighbors;
+    int i, j;
 
     *cycles = mask;
     *no_cycles = 0;
 
-    /* Repeatedly removing the dots with only one neighbor until there are none left
-     * will result in only the dots that form cycles (makes sense if you think how each
-     * dot in a cycle must have at least two neighbors).
-     */
-    while (!done) {
-        done = 1;
-        for (i = 0; i < NUM_DOTS; i++) {
-            if (MASK_CONTAINS(*cycles, i)) {
-                /* Remove dots with one neighbor and add to the no_cycles mask. */
-                get_neighbors(*cycles, i, &num_neighbors, neighbors);
-                if (num_neighbors <= 1) {
-                    *cycles = REMOVE_FROM_MASK(*cycles, i);
-                    *no_cycles = ADD_TO_MASK(*no_cycles, i);
-                    done = 0;
+    for (i = j = 0; i < NUM_DOTS; j = ++i) {
+        if (MASK_CONTAINS(*cycles, j)) {
+            /* Repeatedly remove dots that only have less than two neighbors and add
+             * them to the mask that has no cycles.
+             */
+            int num_neighbors;
+            neighbors_t neighbors;
+            get_neighbors(*cycles, j, &num_neighbors, neighbors);
+            while (num_neighbors <= 1) {
+                *cycles = REMOVE_FROM_MASK(*cycles, j);
+                *no_cycles = ADD_TO_MASK(*no_cycles, j);
+                if (num_neighbors == 0) {
+                    break;
                 }
+                j = neighbors[0];
+                get_neighbors(*cycles, j, &num_neighbors, neighbors);
             }
         }
     }
