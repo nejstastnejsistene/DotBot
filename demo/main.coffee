@@ -30,10 +30,10 @@ new class Demo
     @root = document.getElementById @rootId
     @queue = []
     setTimeout =>
-      @ws = new WebSocket @websocketUrl, @websocketProtocol
-      @ws.onopen = @onopen.bind @
-      @ws.onclose = @onclose.bind @
-      @ws.onmessage = @onmessage.bind @
+      @ws = new WebSocket(@websocketUrl, @websocketProtocol)
+      @ws.onopen = @onopen.bind this
+      @ws.onclose = @onclose.bind this
+      @ws.onmessage = @onmessage.bind this
     , @initialDelay
 
   onopen: ->
@@ -51,15 +51,15 @@ new class Demo
     data = JSON.parse msg.data
     data.grid = ((@colors[c] for c in row.split '') for row in data.grid)
     if not data.path?
-      @dots = new Dots @root, data.grid, @update.bind(@)
+      @dots = new Dots(@root, data.grid, @update.bind this)
     else
       @queue.push data
 
   update: ->
     if (data = @queue.shift())?
-      @dots.drawPath data.path, data.grid, @update.bind(@)
+      @dots.drawPath data.path, data.grid, @update.bind(this)
     else if @running
-      setTimeout @update.bind(@), @pollingInterval
+      setTimeout @update.bind(this), @pollingInterval
 
 
 class Dots
@@ -94,7 +94,7 @@ class Dots
             @setDot nextRowToFill, c, dot
             @delDot r, c
             dot.dataset.row = nextRowToFill
-          nextRowToFill--
+          nextRowToFill -= 1
       # Fill in the new dots.
       if nextRowToFill >= 0
         for r in [0..nextRowToFill]
@@ -131,19 +131,19 @@ class Dots
           drawNextSegment(path.slice 1)
       # On the last dot, pause for a while and then shrink the dots.
       else if path.length is 1
-        setTimeout @clearPath.bind(@, newGrid, next), @clearPathDelay
+        setTimeout @clearPath.bind(this, newGrid, next), @clearPathDelay
 
   # Mark the dot as selected. If the dot is already selected (assuming
   # ignoreSelected is false) it will mark every dot of the same color
   # as selected.
-  selectDot: (dot, checkForCycle=true) ->
-    if checkForCycle && dot.classList.contains 'marked-for-deletion'
+  selectDot: (dot, checkForCycle = true) ->
+    if checkForCycle and dot.classList.contains 'marked-for-deletion'
       setTimeout =>
         color = dot.dataset.color
         @root.dataset.color = color
         for r in [0..5]
           for c in [0..5]
-            if (dot = @getDot r, c).dataset.color == color
+            if (dot = @getDot r, c).dataset.color is color
               @selectDot dot, false
       return
 
@@ -154,7 +154,8 @@ class Dots
     anim.dataset.row = dot.dataset.row
     anim.dataset.col = dot.dataset.col
     anim.dataset.color = dot.dataset.color
-    anim.addEventListener 'animationend', -> @parentNode.removeChild @
+    anim.addEventListener 'animationend', ->
+      e.target.parentNode.removeChild e.target
     @root.appendChild anim
 
   # Create a path segment between two points. It will animate itself via CSS.
@@ -174,5 +175,6 @@ class Dots
     for dot in selectedDots
       @delDot dot.dataset.row, dot.dataset.col
       dot.classList.add 'shrinking'
-      dot.addEventListener 'animationend', -> @parentNode.removeChild @
-    setTimeout @dropDots.bind(@, newGrid, next), @dropDotsDelay
+      dot.addEventListener 'animationend', ->
+        e.target.parentNode.removeChild e.target
+    setTimeout @dropDots.bind(this, newGrid, next), @dropDotsDelay
