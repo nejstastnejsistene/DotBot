@@ -50,10 +50,10 @@ new class Demo
     , @moveRequestInterval
 
   onclose: ->
-    console.log 'disconnected'
+    console.log new Date(), 'disconnected'
     clearInterval @updateIntervalId
     setTimeout =>
-      console.log 'reconnecting...'
+      console.log new Date(), 'reconnecting...'
       @createWebSocket()
     , @reconnectDelay
 
