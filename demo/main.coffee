@@ -3,9 +3,9 @@ new class Demo
   # The root element's id.
   rootId: 'dots'
 
-  # Websocket parameters.
-  websocketUrl: 'ws://localhost:5000'
-  websocketProtocol: 'dotbot-stream'
+  # WebSocket parameters.
+  webSocketUrl: 'ws://localhost:5000'
+  webSocketProtocol: 'dotbot-stream'
 
   # Delay in ms before starting.
   initialDelay: 500
@@ -13,11 +13,13 @@ new class Demo
   # How frequently new moves are requested.
   moveRequestInterval: 500
 
+  reconnectDelay: 5000
+
   # The maximum number of moves that should be queued.
   targetQueueSize: 20
 
   # How frequently to check an empty queue for moves.
-  pollingInterval: 50
+  pollingInterval: 1000
 
   colors:
     R: 'red'
@@ -26,30 +28,38 @@ new class Demo
     B: 'blue'
     V: 'violet'
 
+  parseGrid: (grid) -> ((@colors[c] for c in row.split '' ) for row in grid)
+  fmtGrid: (grid) -> ((c[0].toUpperCase() for c in row).join '' for row in grid)
+
   constructor: ->
     @root = document.getElementById @rootId
     @queue = []
-    setTimeout =>
-      @ws = new WebSocket(@websocketUrl, @websocketProtocol)
-      @ws.onopen = @onopen.bind this
-      @ws.onclose = @onclose.bind this
-      @ws.onmessage = @onmessage.bind this
-    , @initialDelay
+    setTimeout @createWebSocket.bind(this), @initialDelay
 
-  onopen: ->
-    @running = true
+  createWebSocket: ->
+    @ws = new WebSocket(@webSocketUrl, @webSocketProtocol)
+    @ws.onopen = @onopen.bind this
+    @ws.onclose = @onclose.bind this
+    @ws.onmessage = @onmessage.bind this
+
+  onopen: (e) ->
+    if @latestGrid?
+      e.target.send 'setGrid:' + JSON.stringify @fmtGrid(@latestGrid)
     @updateIntervalId = setInterval =>
-      @ws.send 'next' if @running and @queue.length < @targetQueueSize
+      e.target.send 'next' if @queue.length < @targetQueueSize
     , @moveRequestInterval
 
   onclose: ->
-    @running = false
+    console.log 'disconnected'
     clearInterval @updateIntervalId
-    console.log 'socket closed'
+    setTimeout =>
+      console.log 'reconnecting...'
+      @createWebSocket()
+    , @reconnectDelay
 
   onmessage: (msg) ->
     data = JSON.parse msg.data
-    data.grid = ((@colors[c] for c in row.split '') for row in data.grid)
+    data.grid = @latestGrid = @parseGrid data.grid
     if not data.path?
       @dots = new Dots(@root, data.grid, @update.bind this)
     else
@@ -58,7 +68,7 @@ new class Demo
   update: ->
     if (data = @queue.shift())?
       @dots.drawPath data.path, data.grid, @update.bind(this)
-    else if @running
+    else
       setTimeout @update.bind(this), @pollingInterval
 
 

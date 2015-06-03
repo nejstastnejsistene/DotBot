@@ -21,15 +21,45 @@ static struct libwebsocket_context *context;
 struct per_session_data {
     long last_updated;
     int new_game;
-    int score;
     grid_t grid;
 };
 
 static void init_session_data(struct per_session_data *data) {
     data->new_game = 1;
-    data->score = 0;
     memset(data->grid, 0, sizeof(data->grid));
     fill_grid(data->grid, EMPTY);
+}
+
+static void set_grid(struct per_session_data *data, const char *buf) {
+    int row, col;
+    json_object *json_grid = json_tokener_parse(buf);
+    if (json_object_get_type(json_grid) != json_type_array) {
+        return;
+    }
+    if (json_object_array_length(json_grid) != NUM_ROWS) {
+        return;
+    }
+    for (row = 0; row < NUM_ROWS; row++) {
+        json_object *json_row = json_object_array_get_idx(json_grid, row);
+        const char *row_buf;
+        if (json_object_get_string_len(json_row) != NUM_COLS) {
+            return;
+        }
+        row_buf = json_object_get_string(json_row);
+        for (col = 0; col < NUM_COLS; col++) {
+            color_t color;
+            switch (row_buf[col]) {
+                case 'R': color = RED;    break;
+                case 'Y': color = YELLOW; break;
+                case 'G': color = GREEN;  break;
+                case 'B': color = BLUE;   break;
+                case 'V': color = VIOLET; break;
+                default: return;
+            }
+            data->grid[col] = SET_COLUMN_COLOR(data->grid[col], row, color);
+        }
+    }
+    data->new_game = 0;
 }
 
 static json_object *json_grid(grid_t grid) {
@@ -106,6 +136,7 @@ static int dotbot_stream_callback(struct libwebsocket_context *context,
         void *user, void *in, size_t len) {
 
     int n = 0, m;
+    const char *in_buf = (const char *)in;
     unsigned char buf[LWS_SEND_BUFFER_PRE_PADDING + 512 + LWS_SEND_BUFFER_POST_PADDING];
     unsigned char *p = &buf[LWS_SEND_BUFFER_PRE_PADDING];
     struct per_session_data *data = (struct per_session_data*)user;
@@ -115,7 +146,6 @@ static int dotbot_stream_callback(struct libwebsocket_context *context,
         case LWS_CALLBACK_ESTABLISHED:
             lwsl_info("dotbot_stream_callback: LWS_CALLBACK_ESTABLISHED\n");
             init_session_data(data);
-            libwebsocket_callback_on_writable(context, wsi);
             break;
         /* Calculate a move, update the board, and send back the results. */
         case LWS_CALLBACK_SERVER_WRITEABLE:
@@ -129,8 +159,11 @@ static int dotbot_stream_callback(struct libwebsocket_context *context,
             }
             break;
         case LWS_CALLBACK_RECEIVE:
-            if (len == 4 && strncmp((const char *)in, "next", len) == 0) {
+            if (len == 4 && strncmp(in_buf, "next", len) == 0) {
                 libwebsocket_callback_on_writable(context, wsi);
+            }
+            if (strncmp(in_buf, "setGrid:", 8) == 0) {
+                set_grid(data, in_buf + 8);
             }
             break;
         default:
