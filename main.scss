@@ -54,7 +54,6 @@ $light-violet: #cdaeda;
         height: $dot-width;
         position: absolute;
 
-        animation: descend $falling-dots-duration $falling-dots-timing-function;
         transition: top $falling-dots-duration $falling-dots-timing-function;
         
         @for $i from 0 through 5 {
@@ -63,8 +62,12 @@ $light-violet: #cdaeda;
             &[data-row="#{$i}"] { top:  $offset }
         }
 
+        &.falling {
+            animation: falling $falling-dots-duration $falling-dots-timing-function forwards;
+        }
+
         &.selecting {
-            animation: selecting $selecting-duration linear;
+            animation: selecting $selecting-duration linear forwards;
             z-index: -2;
         }
 
@@ -129,17 +132,13 @@ $light-violet: #cdaeda;
     }
 }
 
-@keyframes descend {
+@keyframes falling {
     from {
-        top: 0%;
+        top: 0;
     }
 }
 
 @keyframes selecting {
-    from {
-        transform: scale(1);
-        opacity: 1;
-    }
     to {
         transform: scale($selecting-scale-factor);
         opacity: 0;
