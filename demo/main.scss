@@ -1,6 +1,11 @@
 $dot-width: 6%;
 $path-width: $dot-width / (2 * 2.8);
 
+$falling-dots-duration: 0.25s;
+$falling-dots-timing-function: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+
+$path-segment-duration: 0.1s;
+
 $selecting-duration: 0.5s;
 $selecting-scale-factor: 2.8;
 
@@ -29,6 +34,7 @@ $light-violet: #cdaeda;
     width: 800px;
     height: 800px;
     position: relative;
+    z-index: -3;
 
     &[data-color=red]    { background: $light-red }
     &[data-color=yellow] { background: $light-yellow }
@@ -47,33 +53,31 @@ $light-violet: #cdaeda;
         width: $dot-width;
         height: $dot-width;
         position: absolute;
-        
-        transition: top 0.25s cubic-bezier(0.175,0.885,0.32,1.275);
+
+        animation: descend $falling-dots-duration $falling-dots-timing-function;
+        transition: top $falling-dots-duration $falling-dots-timing-function;
         
         @for $i from 0 through 5 {
             $offset: offset($i) - $dot-width/2;
-            &.col#{$i} { left: $offset }
-            &.row#{$i} { top:  $offset }
-            &.hidden-row#{5-$i} { top: -$offset }
+            &[data-col="#{$i}"] { left: $offset }
+            &[data-row="#{$i}"] { top:  $offset }
         }
 
         &.selecting {
-            animation-duration: $selecting-duration;
-            animation-timing-function: linear;
-            animation-name: selecting;
+            animation: selecting $selecting-duration linear;
+            z-index: -2;
         }
 
         &.shrinking {
-            animation-duration: $shrinking-duration;
-            animation-timing-function: linear;
-            animation-name: shrinking;
+            animation: shrinking $shrinking-duration linear forwards;
+            z-index: -1;
         }
     }
 
     .path-segment {
         position: absolute;
 
-        animation-duration: 0.2s;
+        animation-duration: $path-segment-duration;
         animation-timing-function: linear;
         animation-fill-mode: forwards;
 
@@ -125,7 +129,17 @@ $light-violet: #cdaeda;
     }
 }
 
+@keyframes descend {
+    from {
+        top: 0%;
+    }
+}
+
 @keyframes selecting {
+    from {
+        transform: scale(1);
+        opacity: 1;
+    }
     to {
         transform: scale($selecting-scale-factor);
         opacity: 0;
