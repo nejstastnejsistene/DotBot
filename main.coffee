@@ -64,80 +64,65 @@ new class Demo
 
 class Dots
 
+  # How long it takes the dots to fall into place.
+  fallingDotsDuration: 250
+
   # The delay between the dots falling into place and drawing the next move.
   drawPathDelay: 100
 
   # How long a completed path is shown before the dots are cleared.
   clearPathDelay: 500
 
+  dropDotsDelay: 150
+
   # Create a dots board in a root element. Calling this calls the dots of
   # the given grid to fall into place.
   constructor: (@root, @grid, next) ->
-    @dropDots next
+    @dots = ([] for r in [0..5])
+    @dropDots @grid, next
 
   # Drops all dots into place, creating new dots as needed. Dots that have
   # been shrunk should be removed from the DOM prior to calling this method.
   # The colors for the new dots falling in is determined by looking at @grid.
-  dropDots: (next) ->
-    # Keep track of how many dots are currently falling (by calling add() in
-    # @moveDot()) and calling next() after the last one finishes.
-    @fallingDots = new class
-      constructor: (@inProgress = 0) ->
-      add: (dot) ->
-        @inProgress++;
-        dot.addEventListener 'transitionend', => next() if --@inProgress is 0
+  dropDots: (@grid, next) ->
     for c in [0..5]
       # Drop the dots into place, from the bottom up.
       nextRowToFill = 5
       for r in [5..0]
         if (dot = @getDot r, c)?
           if r isnt nextRowToFill
-            @moveDot dot, "row#{r}", "row#{nextRowToFill}"
+            @setDot nextRowToFill, c, dot
+            @delDot r, c
+            dot.dataset.row = nextRowToFill
           nextRowToFill--
       # Fill in the new dots.
       if nextRowToFill >= 0
         for r in [0..nextRowToFill]
-          hiddenRow = 5 - nextRowToFill + r
-          @newDot hiddenRow, r, c
+          @newDot r, c
+    setTimeout next, @fallingDotsDuration + @drawPathDelay
 
   # Create a new dot in the DOM. The dot is created in a "hidden row" above the
   # visibile grid, and is then moved to it's proper place via a nice CSS
   # transition that animates it falling into place.
-  newDot: (hr, r, c) ->
+  newDot: (r, c) ->
     dot = document.createElement 'div'
-    dot.className = "dot hidden-row#{hr} col#{c} #{@grid[r][c]}"
+    dot.className = 'dot'
+    dot.dataset.row = r
+    dot.dataset.col = c
+    dot.dataset.color = @grid[r][c]
     @root.appendChild dot
-    @moveDot dot, "hidden-row#{hr}", "row#{r}"
+    @setDot r, c, dot
 
-  # Retrieve a dot from the DOM based on its row and column.
-  getDot: (r, c) ->
-    @root.getElementsByClassName("dot row#{r} col#{c}")[0]
-
-  # Move a dot from one row to another. This triggers a CSS transition
-  # that animates it falling into place.
-  moveDot: (dot, oldRowClass, newRowClass) ->
-    # setTimeout with no delay so that if the element was just created, the
-    # runtime will have a moment to create the element before changing the
-    # classes so the transition triggers.
-    setTimeout =>
-      dot.className = dot.className.replace oldRowClass, newRowClass
-      @fallingDots.add dot
+  getDot: (r, c) -> @dots[r][c]
+  setDot: (r, c, dot) -> @dots[r][c] = dot
+  delDot: (r, c) -> delete @dots[r][c]
 
   # Draw a path through the dots.
   drawPath: (path, newGrid, next) ->
-    # If there is a cycle, also mark all dots of that color.
-    if path.length > 1 and "#{path[0]}" == "#{path[path.length-1]}"
-      [r, c] = path[0]
-      color = @grid[r][c]
-      for r in [0..5]
-        for c in [0..5]
-          @getDot(r, c).className += ' marked' if @grid[r][c] == color
-    else
-      # Mark all of the dots in the path so they can be removed later.
-      for [r, c] in path
-        @getDot(r, c).className += ' marked'
     # Recursively draw each path segment.
     do drawNextSegment = (path) =>
+      [r, c] = path[0]
+      @selectDot @getDot(path[0]...)
       # If there are at least two dots left, draw the next segment.
       if path.length > 1
         segment = @newPathSegment path[0], path[1]
@@ -148,20 +133,46 @@ class Dots
       else if path.length is 1
         setTimeout @clearPath.bind(@, newGrid, next), @clearPathDelay
 
+  # Mark the dot as selected. If the dot is already selected (assuming
+  # ignoreSelected is false) it will mark every dot of the same color
+  # as selected.
+  selectDot: (dot, checkForCycle=true) ->
+    if checkForCycle && dot.classList.contains 'marked-for-deletion'
+      setTimeout =>
+        color = dot.dataset.color
+        @root.dataset.color = color
+        for r in [0..5]
+          for c in [0..5]
+            if (dot = @getDot r, c).dataset.color == color
+              @selectDot dot, false
+      return
+
+    dot.classList.add 'marked-for-deletion'
+
+    anim = document.createElement 'div'
+    anim.className = 'dot selecting'
+    anim.dataset.row = dot.dataset.row
+    anim.dataset.col = dot.dataset.col
+    anim.dataset.color = dot.dataset.color
+    anim.addEventListener 'animationend', -> @parentNode.removeChild @
+    @root.appendChild anim
+
   # Create a path segment between two points. It will animate itself via CSS.
   newPathSegment: ([r1, c1], [r2, c2]) ->
     segment = document.createElement 'div'
-    segment.className =
-      "path-segment from-#{r1}-#{c1}-to-#{r2}-#{c2} #{@grid[r1][c1]}"
+    segment.className = "path-segment from-#{r1}-#{c1}-to-#{r2}-#{c2}"
+    segment.dataset.color = @grid[r1][c1]
     @root.appendChild segment
     segment
 
   # Remove a path and the dots that were affected, then fill in the new dots.
-  clearPath: (@grid, next) ->
-    # Remove all the dots marked by a path, as well as the path.
-    elements = @root.getElementsByClassName 'dot marked'
-    elements[0].parentNode.removeChild elements[0] while elements[0]
-    elements = @root.getElementsByClassName 'path-segment'
-    elements[0].parentNode.removeChild elements[0] while elements[0]
-    # Drop the new dots into place.
-    @dropDots next
+  clearPath: (newGrid, next) ->
+    delete @root.dataset.color if @root.dataset.color?
+    segments = @root.getElementsByClassName 'path-segment'
+    segments[0].parentNode.removeChild segments[0] while segments[0]
+    selectedDots = @root.getElementsByClassName 'dot marked-for-deletion'
+    for dot in selectedDots
+      @delDot dot.dataset.row, dot.dataset.col
+      dot.classList.add 'shrinking'
+      dot.addEventListener 'animationend', -> @parentNode.removeChild @
+    setTimeout @dropDots.bind(@, newGrid, next), @dropDotsDelay
