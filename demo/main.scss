@@ -1,5 +1,25 @@
-$dot-width: 6.125%;
-$path-width: $dot-width/8;
+$dot-width: 6%;
+$path-width: $dot-width / (2 * 2.8);
+
+$selecting-duration: 0.5s;
+$selecting-scale-factor: 2.8;
+
+$shrinking-duration: 0.25s;
+
+$red: #eb5d49;
+$light-red: #f4aea6;
+
+$yellow: #e6da24;
+$light-yellow: #f2ec94;
+
+$green: #8ae892;
+$light-green: #c6f3c8;
+
+$blue: #8bbcff;
+$light-blue: #c6ddff;
+
+$violet: #985db7;
+$light-violet: #cdaeda;
 
 @function offset($i) {
     @return ($i + 1) / 7 * 100%;
@@ -10,21 +30,25 @@ $path-width: $dot-width/8;
     height: 800px;
     position: relative;
 
-    [data-color=red]    { background: #ef5d42 }
-    [data-color=yellow] { background: #e7db29 }
-    [data-color=green]  { background: #8ce78c }
-    [data-color=blue]   { background: #8cbaff }
-    [data-color=violet] { background: #9c5db5 }
+    &[data-color=red]    { background: $light-red }
+    &[data-color=yellow] { background: $light-yellow }
+    &[data-color=green]  { background: $light-green }
+    &[data-color=blue]   { background: $light-blue }
+    &[data-color=violet] { background: $light-violet }
+
+    [data-color=red]    { background: $red }
+    [data-color=yellow] { background: $yellow }
+    [data-color=green]  { background: $green }
+    [data-color=blue]   { background: $blue }
+    [data-color=violet] { background: $violet }
 
     .dot {
-
         border-radius: 50%;
         width: $dot-width;
         height: $dot-width;
         position: absolute;
-        z-index: -1;
         
-        transition: top 0.4s cubic-bezier(0.175,0.885,0.32,1.275);
+        transition: top 0.25s cubic-bezier(0.175,0.885,0.32,1.275);
         
         @for $i from 0 through 5 {
             $offset: offset($i) - $dot-width/2;
@@ -33,11 +57,16 @@ $path-width: $dot-width/8;
             &.hidden-row#{5-$i} { top: -$offset }
         }
 
-        &.selected {
-            animation-duration: 0.4s;
+        &.selecting {
+            animation-duration: $selecting-duration;
             animation-timing-function: linear;
-            animation-fill-mode: both;
-            animation-name: select;
+            animation-name: selecting;
+        }
+
+        &.shrinking {
+            animation-duration: $shrinking-duration;
+            animation-timing-function: linear;
+            animation-name: shrinking;
         }
     }
 
@@ -96,9 +125,15 @@ $path-width: $dot-width/8;
     }
 }
 
-@keyframes select{
-    50% { transform: scale(1.25) }
-    100% { transform: scale(1) }
+@keyframes selecting {
+    to {
+        transform: scale($selecting-scale-factor);
+        opacity: 0;
+    }
+}
+
+@keyframes shrinking {
+    to { transform: scale(0) }
 }
 
 @for $r from 0 through 5 {

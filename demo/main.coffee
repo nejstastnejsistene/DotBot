@@ -65,7 +65,7 @@ new class Demo
 class Dots
 
   # How long it takes the dots to fall into place.
-  fallingDotsDuration: 500
+  fallingDotsDuration: 250
 
   # The delay between the dots falling into place and drawing the next move.
   drawPathDelay: 100
@@ -87,9 +87,7 @@ class Dots
       nextRowToFill = 5
       for r in [5..0]
         if (dot = @getDot r, c)?
-          if r isnt nextRowToFill
-            @moveDot dot, "row#{r}", "row#{nextRowToFill}"
-          nextRowToFill--
+          @moveDot dot, "row#{r}", "row#{nextRowToFill--}"
       # Fill in the new dots.
       if nextRowToFill >= 0
         for r in [0..nextRowToFill]
@@ -118,7 +116,9 @@ class Dots
     # runtime will have a moment to create the element before changing the
     # classes so the transition triggers.
     setTimeout =>
-      dot.className = dot.className.replace oldRowClass, newRowClass
+      dot.classList.remove oldRowClass
+      dot.classList.add newRowClass
+    , 100
 
   # Draw a path through the dots.
   drawPath: (path, newGrid, next) ->
@@ -138,19 +138,25 @@ class Dots
   # Mark the dot as selected. If the dot is already selected (assuming
   # ignoreSelected is false) it will mark every dot of the same color
   # as selected.
-  selectDot: (dot, ignoreSelected=false) ->
-    if dot.className.includes 'selected'
-      if not ignoreSelected
-        # Reselect the current dot.
-        dot.className = dot.className.replace ' selected', ''
+  selectDot: (dot, checkForCycle=true) ->
+    if dot.classList.contains 'selected'
+      dot.classList.remove 'selected'
+      if checkForCycle
         setTimeout =>
           color = dot.dataset.color
+          @root.dataset.color = color
           for r in [0..5]
             for c in [0..5]
               if (dot = @getDot r, c).dataset.color == color
-                @selectDot dot, true
-    else
-      dot.className += ' selected'
+                @selectDot dot, false
+        return
+    setTimeout =>
+      dot.classList.add 'selected'
+      anim = document.createElement 'div'
+      anim.className = dot.className
+      anim.classList.add 'selecting'
+      anim.dataset.color = dot.dataset.color
+      @root.appendChild anim
 
   # Create a path segment between two points. It will animate itself via CSS.
   newPathSegment: ([r1, c1], [r2, c2]) ->
@@ -162,10 +168,14 @@ class Dots
 
   # Remove a path and the dots that were affected, then fill in the new dots.
   clearPath: (@grid, next) ->
-    # Remove all the dots selected by a move, as well as the path.
-    elements = @root.getElementsByClassName 'dot selected'
-    elements[0].parentNode.removeChild elements[0] while elements[0]
-    elements = @root.getElementsByClassName 'path-segment'
-    elements[0].parentNode.removeChild elements[0] while elements[0]
-    # Drop the new dots into place.
-    @dropDots next
+    delete @root.dataset.color if @root.dataset.color?
+    segments = @root.getElementsByClassName 'path-segment'
+    segments[0].parentNode.removeChild segments[0] while segments[0]
+    selectedDots = @root.getElementsByClassName 'dot selected'
+    for dot in selectedDots
+      dot.className += ' shrinking'
+      dot.addEventListener 'animationend', (e) =>
+        if e.animationName == 'shrinking'
+          e.target.parentNode.removeChild e.target
+          if selectedDots.length is 0
+            setTimeout => @dropDots next
