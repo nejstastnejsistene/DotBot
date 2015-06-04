@@ -46,7 +46,7 @@ mask_t naive_choose_move(grid_t grid) {
 
     int num_moves;
     move_list_t moves;
-    get_moves(grid, &num_moves, moves);
+    get_moves(grid, 1, &num_moves, moves);
 
     for (i = 0; i < num_moves; i++) {
         grid_t new_grid;
@@ -104,7 +104,7 @@ int apply_move(grid_t grid, mask_t move) {
 /* Get all possible moves that can be made on a grid. Comprimises are made to
  * compute the most moves in the smallest amount of time.
  */
-void get_moves(grid_t grid, int *num_moves, move_list_t moves) {
+void get_moves(grid_t grid, int allow_shrinkers, int *num_moves, move_list_t moves) {
     color_t color;
     mask_t color_mask, cycles, no_cycles;
 
@@ -120,7 +120,7 @@ void get_moves(grid_t grid, int *num_moves, move_list_t moves) {
         }
         /* DFS on the dots without cycles. */
         if (no_cycles) {
-            get_paths(no_cycles, num_moves, moves);
+            get_paths(no_cycles, allow_shrinkers, num_moves, moves);
         }
     }
 }
@@ -185,7 +185,7 @@ void find_square(mask_t mask, color_t color, int *num_moves, move_list_t moves) 
 }
 
 /* Get all possible paths in a color mask without cycles. */
-void get_paths(mask_t color_mask, int *num_moves, move_list_t moves) {
+void get_paths(mask_t color_mask, int allow_shrinkers, int *num_moves, move_list_t moves) {
     int i, num_neighbors;
     neighbors_t neighbors;
     path_t path;
@@ -196,7 +196,7 @@ void get_paths(mask_t color_mask, int *num_moves, move_list_t moves) {
         if (MASK_CONTAINS(color_mask, i)) {
             get_neighbors(color_mask, i, &num_neighbors, neighbors);
             if (num_neighbors <= 1) {
-                build_paths(color_mask, visited, i, num_moves, moves, i, 0, path);
+                build_paths(color_mask, visited, i, allow_shrinkers, num_moves, moves, i, 0, path);
             }
         }
     }
@@ -211,6 +211,7 @@ void build_paths(
         mask_t color_mask,      /* The color mask that paths are being found in. */
         visited_t visited,      /* Matrix of (start,end) pairs representing visited paths. */
         int start_index,        /* Where to start the path (or where it was started, after recursion). */
+        int allow_shrinkers,    /* Whether to generate paths of length 1, which requires a power-up in-game. */
         int *num_moves,         /* Number of moves currently stored in moves. */
         move_list_t moves,      /* Array of moves being generated. */
         int current_index,      /* Current end position of the path. */
@@ -239,24 +240,25 @@ void build_paths(
      */
     if (num_neighbors == 0) {
         if (!visited[start_index][current_index]) {
-            get_subpaths(num_moves, moves, visited, path_length, path);
+            get_subpaths(num_moves, moves, visited, allow_shrinkers, path_length, path);
         }
         return;
     }
 
     /* Recurse on the remaining branches of the intersection. */
     for (i = 0; i < num_neighbors; i++) {
-        build_paths(color_mask, visited, start_index, num_moves, moves, neighbors[i], path_length, path);
+        build_paths(color_mask, visited, start_index, allow_shrinkers, num_moves, moves, neighbors[i], path_length, path);
     }
 }
 
 /* Get all unique subpaths of a path with no branches. This adds a total of n(n+1)/2 paths
  * for a path of length n (1 of length n, 2 of length n-1, ..., n of length 1).
  */
-void get_subpaths(int *num_moves, move_list_t moves, visited_t visited, int path_length, path_t path) {
+void get_subpaths(int *num_moves, move_list_t moves, visited_t visited, int allow_shrinkers, int path_length, path_t path) {
     int start, length;
+    int smallest_length = allow_shrinkers ? 1 : 2;
     /* Count backwards through each possible length of the subpaths. */
-    for (length = path_length; length >= 1; length--) {
+    for (length = path_length; length >= smallest_length; length--) {
         /* Go through each index a subpath of this length could start. */
         for (start = 0; start < path_length - length + 1; start++) {
             int i = path[start];
