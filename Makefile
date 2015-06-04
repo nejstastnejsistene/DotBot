@@ -1,13 +1,16 @@
 CC=gcc
 CFLAGS=-Wall -Wextra -Werror -ansi -pedantic -g -O3
 
-TARGET=dotbot
+all: dotbot benchmark
 
-$(TARGET): main.c dots.o
+dotbot: main.c dots.o
 	$(CC) $(CFLAGS) -o $@ $^ -lwebsockets -ljson
+
+benchmark: benchmark.c dots.o
+	$(CC) $(CFLAGS) -o $@ $^
 
 dots.o: dots.c dots.h
 	$(CC) $(CFLAGS) -c $<
 
 clean:
-	rm -rf $(TARGET) *.o
+	rm -rf dotbot benchmark *.o

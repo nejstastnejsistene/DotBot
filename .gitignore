@@ -33,6 +33,7 @@
 
 # DotBot
 dotbot
+benchmark
 main.css
 main.js
 main.*.map
