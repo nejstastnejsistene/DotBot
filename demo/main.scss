@@ -1,5 +1,5 @@
 $dot-width: 6%;
-$path-width: $dot-width / (2 * 2.8);
+$path-width: $dot-width / 7;
 
 $falling-dots-duration: 0.25s;
 $falling-dots-timing-function: cubic-bezier(0.175, 0.885, 0.32, 1.275);
@@ -7,7 +7,7 @@ $falling-dots-timing-function: cubic-bezier(0.175, 0.885, 0.32, 1.275);
 $path-segment-duration: 0.1s;
 
 $selecting-duration: 0.5s;
-$selecting-scale-factor: 2.8;
+$selecting-scale-factor: 3;
 
 $shrinking-duration: 0.25s;
 
