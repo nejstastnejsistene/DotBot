@@ -19,7 +19,8 @@ typedef enum {
     BLUE,
     VIOLET,
     WHITE,
-    BLACK
+    BLACK,
+    NUM_COLORS
 } color_t;
 
 /* Column major array. Each column is stored as a bitmask of 6 3-bit colors. */
@@ -107,7 +108,8 @@ void pprint_grid(grid_t);
 
 void pprint_mask(mask_t, color_t, color_t);
 
-mask_t naive_choose_move(grid_t);
+mask_t naive_choose_move(grid_t, int);
+mask_t choose_move(grid_t, int, int);
 
 void fill_grid(grid_t, color_t);
 
