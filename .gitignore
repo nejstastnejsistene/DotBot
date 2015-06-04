@@ -32,7 +32,7 @@
 *.dSYM/
 
 # DotBot
-dotbot
+server
 benchmark
 main.css
 main.js

@@ -26,7 +26,7 @@ maximum: 458
 
 ### Run server
 ```
-./dotbot
+./server
 ```
 
 ### Run web client
@@ -41,7 +41,7 @@ python -m SimpleHTTPServer 8000
 Run the websocket server
 
 ```
-./dotbot
+./server
 ```
 Serve the client code
 

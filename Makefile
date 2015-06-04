@@ -1,16 +1,20 @@
-CC=gcc
-CFLAGS=-Wall -Wextra -Werror -ansi -pedantic -g -O3
+CC = gcc
+CFLAGS = -Wall -Wextra -Werror -ansi -pedantic -O3
 
-all: dotbot benchmark
+TARGETS = server benchmark
+OBJECTS = dots.o
+LIBRARIES = -lm -lwebsockets -ljson
 
-dotbot: main.c dots.o
-	$(CC) $(CFLAGS) -o $@ $^ -lm -lwebsockets -ljson
+all: $(TARGETS)
 
-benchmark: benchmark.c dots.o
-	$(CC) $(CFLAGS) -o $@ $^ -lm
+debug: CFLAGS += -g -pg
+debug: all
 
-dots.o: dots.c dots.h
-	$(CC) $(CFLAGS) -c $< -lm
+$(TARGETS) : % : %.c $(OBJECTS)
+	$(CC) $(CFLAGS) -o $@ $^ $(LIBRARIES)
+
+%.o: %.c %.h
+	$(CC) $(CFLAGS) -c $< $(LIBRARIES)
 
 clean:
-	rm -rf dotbot benchmark *.o
+	rm -f $(TARGETS) $(OBJECTS)
