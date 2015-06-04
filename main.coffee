@@ -50,10 +50,10 @@ new class Demo
     , @moveRequestInterval
 
   onclose: ->
-    console.log 'disconnected'
+    console.log new Date(), 'disconnected'
     clearInterval @updateIntervalId
     setTimeout =>
-      console.log 'reconnecting...'
+      console.log new Date(), 'reconnecting...'
       @createWebSocket()
     , @reconnectDelay
 
@@ -157,9 +157,10 @@ class Dots
       @toBeRemoved ?= []
       @toBeRemoved.push dot
 
-    anim = new Dot(dot.row(), dot.col(), dot.color())
-    anim.animateSelection()
-    @root.appendChild anim.element
+    dot.selection.element.remove() if dot.selection?
+    dot.selection = new Dot(dot.row(), dot.col(), dot.color())
+    dot.selection.animateSelection()
+    @root.appendChild dot.selection.element
 
   # Create a path segment between two points. It will animate itself via CSS.
   newPathSegment: ([r1, c1], [r2, c2]) ->
@@ -181,7 +182,7 @@ class Dots
         @delDot x.row(), x.col()
         x.animateShrinking()
       else
-        x.parentNode.removeChild x
+        x.remove()
     @toBeRemoved = []
     setTimeout @dropDots.bind(this, newGrid, next), @dropDotsDelay
 
@@ -213,5 +214,4 @@ class Dot
 
   animateAndRemove: (className) ->
     @element.classList.add className
-    @element.addEventListener 'animationend', (e) ->
-      e.target.parentNode.removeChild e.target
+    @element.addEventListener 'animationend', (e) -> e.target.remove()
