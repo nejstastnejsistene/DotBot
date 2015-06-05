@@ -6,7 +6,7 @@
 #include <sys/time.h>
 
 #include <libwebsockets.h>
-#include <json/json.h>
+#include <json-c/json.h>
 
 #include "dots.h"
 

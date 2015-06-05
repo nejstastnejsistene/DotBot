@@ -3,7 +3,7 @@ CFLAGS = -Wall -Wextra -Werror -ansi -pedantic -O3
 
 TARGETS = server benchmark
 OBJECTS = dots.o
-LIBRARIES = -lm -lwebsockets -ljson
+LIBRARIES = -lm -lwebsockets -ljson-c
 
 all: $(TARGETS)
 
