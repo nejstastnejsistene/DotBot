@@ -1,12 +1,32 @@
 DotBot
 ======
 
-### Install dependencies and build
+### Install libwebsockets
 ```
-sudo apt-get install libwebsockets-dev libjson0-dev
+git clone git://git.libwebsockets.org/libwebsockets
+cd libwebsockets
+cmake .
 make
+sudo make install
 ```
-If you're not running Ubuntu, check out [heroku-buildpack-DotBot](https://github.com/nejstastnejsistene/heroku-buildpack-DotBot) for an idea of how to do this the hard way.
+
+### Install libjson-c
+```
+git clone git://github.com/json-c/json-c
+cd json-c
+sh autogen.sh
+./configure
+make
+sudo make install
+```
+
+### Build
+```
+make
+make debug # With debugging and profiling info
+```
+
+Check out [heroku-buildpack-DotBot](https://github.com/nejstastnejsistene/heroku-buildpack-DotBot) to see how this is done on Heroku.
 
 ### Run benchmark
 ```
