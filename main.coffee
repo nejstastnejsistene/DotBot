@@ -13,6 +13,7 @@ new class Demo
   # How frequently new moves are requested.
   moveRequestInterval: 500
 
+  # How long to wait before attempting to reconnect.
   reconnectDelay: 5000
 
   # The maximum number of moves that should be queued.
@@ -28,6 +29,9 @@ new class Demo
     B: 'blue'
     V: 'violet'
 
+  # Converting the grid from and to the server's format.
+  # Our format: 6x6 array of lower case color names
+  # Server format: 1D array where each row is a string of "RYGBV"
   parseGrid: (grid) -> ((@colors[c] for c in row.split '' ) for row in grid)
   fmtGrid: (grid) -> ((c[0].toUpperCase() for c in row).join '' for row in grid)
 
@@ -43,14 +47,18 @@ new class Demo
     @ws.onmessage = @onmessage.bind this
 
   onopen: (e) ->
+    # If the @latestGrid is set, then this is reconnection. Let the server
+    # know where we left off so we can continue the same game.
     if @latestGrid?
       e.target.send 'setGrid:' + JSON.stringify @fmtGrid(@latestGrid)
+    # Request new moves at regular interval, but only if the queue isn't full.
     @updateIntervalId = setInterval =>
       e.target.send 'next' if @queue.length < @targetQueueSize
     , @moveRequestInterval
 
   onclose: ->
     console.log new Date(), 'disconnected'
+    # Stop updating on the old connection, and then reconnect.
     clearInterval @updateIntervalId
     setTimeout =>
       console.log new Date(), 'reconnecting...'
@@ -60,12 +68,16 @@ new class Demo
   onmessage: (msg) ->
     data = JSON.parse msg.data
     data.grid = @latestGrid = @parseGrid data.grid
+    # The server sends its first message without a path to indicate that
+    # it's a new board. If there's no path, then create the initial dots!
+    # Otherwise put it in a queue to be dealt with later.
     if not data.path?
       @dots = new Dots(@root, data.grid, @update.bind this)
     else
       @queue.push data
 
   update: ->
+    # If theres a new move in the queue, play it. Otherwise, try again later.
     if (data = @queue.shift())?
       @dots.drawPath data.path, data.grid, @update.bind(this)
     else
@@ -83,6 +95,7 @@ class Dots
   # How long a completed path is shown before the dots are cleared.
   clearPathDelay: 500
 
+  # Delay after the dots have been shrunk but before the dots start falling.
   dropDotsDelay: 150
 
   # Create a dots board in a root element. Calling this calls the dots of
@@ -91,6 +104,7 @@ class Dots
     @dots = ([] for r in [0..5])
     @dropDots @grid, next
 
+  # Used for keeping track of the dot objects currently being used.
   getDot: (r, c) -> @dots[r][c]
   setDot: (r, c, dot) -> @dots[r][c] = dot
   delDot: (r, c) -> delete @dots[r][c]
@@ -135,28 +149,31 @@ class Dots
         # Schedule the rest of the path to be drawn once the animation finishes.
         segment.addEventListener 'animationend', ->
           drawNextSegment(path.slice 1)
+        @root.appendChild segment
       # On the last dot, pause for a while and then shrink the dots.
       else if path.length is 1
         setTimeout @clearPath.bind(this, newGrid, next), @clearPathDelay
 
-  # Mark the dot as selected. If the dot is already selected (assuming
-  # ignoreSelected is false) it will mark every dot of the same color
-  # as selected.
+  # Mark a dot as selected. If the selected dot forms a cycle, it selects
+  # all dots of that color like it does in the game.
   selectDot: (dot, checkForCycle = true) ->
-    if checkForCycle and dot.isMarkedForDeletion()
-      setTimeout =>
-        @root.dataset.color = color = dot.color()
-        for r in [0..5]
-          for c in [0..5]
-            if (dot = @getDot r, c).color() is color
-              @selectDot dot, false
+    # Detect cycles by trying to reselect an already selected dot.
+    if checkForCycle and dot.markedForDeletion
+      # If a cycle is found, select each dot of that color.
+      @root.dataset.color = color = dot.color()
+      for r in [0..5]
+        for c in [0..5]
+          if (dot = @getDot r, c).color() is color
+            @selectDot dot, false
       return
 
-    if not dot.isMarkedForDeletion()
-      dot.markForDeletion()
+    # Keep track of which dots need to be removed later.
+    if not dot.markedForDeletion
+      dot.markedForDeletion = true
       @toBeRemoved ?= []
       @toBeRemoved.push dot
 
+    # Create a nice selection animation (removing an old one if necessary).
     dot.selection.element.remove() if dot.selection?
     dot.selection = new Dot(dot.row(), dot.col(), dot.color())
     dot.selection.animateSelection()
@@ -167,16 +184,15 @@ class Dots
     segment = document.createElement 'div'
     segment.className = "path-segment from-#{r1}-#{c1}-to-#{r2}-#{c2}"
     segment.dataset.color = @grid[r1][c1]
-    @root.appendChild segment
-
+    # Make sure the segment will be removed at the end of the move.
     @toBeRemoved ?= []
     @toBeRemoved.push segment
-
     segment
 
   # Remove a path and the dots that were affected, then fill in the new dots.
   clearPath: (newGrid, next) ->
     delete @root.dataset.color if @root.dataset.color?
+    # Remove all of the elements that we've indicated to be removed.
     for x in @toBeRemoved
       if x instanceof Dot
         @delDot x.row(), x.col()
@@ -195,14 +211,10 @@ class Dot
     @row(r)
     @col(c)
     @color(color)
-    @element.dot = this
 
   row: (x) -> @element.dataset.row = x ? @element.dataset.row
   col: (x) -> @element.dataset.col = x ? @element.dataset.col
   color: (x) -> @element.dataset.color = x ? @element.dataset.color
-
-  markForDeletion: -> @element.classList.add 'marked-for-deletion'
-  isMarkedForDeletion: -> @element.classList.contains 'marked-for-deletion'
 
   animateFall: ->
     @element.classList.add 'falling'
