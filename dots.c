@@ -84,10 +84,10 @@ void _choose_move(grid_t grid, int allow_shrinkers, int turns_remaining, int cer
         memcpy(new_grid, grid, sizeof(grid_t));
         score = apply_move(new_grid, moves[i]);
 
-        value = pow(score, certainty / 180.0);
+        value = pow(score, certainty / 720.0);
 
         if (turns_remaining > 1) {
-            int next_certainty = certainty - score * (HAS_CYCLE(moves[i]) ? 3 : 4);
+            int next_certainty = certainty - score * (HAS_CYCLE(moves[i]) ? 15 : 16);
             float next_value;
             mask_t next_move;
             _choose_move(new_grid, allow_shrinkers, turns_remaining - 1, next_certainty, &next_value, &next_move);
@@ -110,7 +110,7 @@ mask_t choose_move(grid_t grid, int allow_shrinkers, int turns_remaining) {
     float value;
     mask_t move;
     int depth = (turns_remaining > MAX_DEPTH) ? MAX_DEPTH : turns_remaining;
-    _choose_move(grid, allow_shrinkers, depth, 180, &value, &move);
+    _choose_move(grid, allow_shrinkers, depth, 720, &value, &move);
     return move;
 }
 
