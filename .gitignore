@@ -34,6 +34,7 @@
 # DotBot
 server
 benchmark
+compute_cycles
 main.css
 main.js
 main.*.map

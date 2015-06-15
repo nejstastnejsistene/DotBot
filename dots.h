@@ -52,6 +52,7 @@ typedef uint64_t mask_t;
 
 #define EMPTY_MASK                  ((mask_t) 0)
 #define SINGLETON_MASK(i)           (((mask_t) 1) << (i))
+#define ALL_DOTS                    (SINGLETON_MASK(NUM_DOTS) - 1)
 #define MASK_CONTAINS(mask, i)      (!!(SINGLETON_MASK(i) & (mask)))
 #define ADD_TO_MASK(mask, i)        ((mask) | SINGLETON_MASK(i))
 #define REMOVE_FROM_MASK(mask, i)   ((mask) & ~SINGLETON_MASK(i))
@@ -65,8 +66,7 @@ typedef uint64_t mask_t;
 #define ENCODE_CYCLE_COLOR(color)   (((mask_t)(color)) << COLOR_OFFSET)
 #define SET_CYCLE(mask, color)      (ADD_TO_MASK(mask, CYCLE_FLAG_INDEX) | ENCODE_CYCLE_COLOR(color))
 #define HAS_CYCLE(mask)             MASK_CONTAINS(mask, CYCLE_FLAG_INDEX)
-#define CYCLE_COLOR(mask)           ((mask) >> COLOR_OFFSET)
-#define REMOVE_CYCLE_INFO(mask)     ((mask) & (SINGLETON_MASK(NUM_DOTS) - 1))
+#define GET_CYCLE_COLOR(mask)       ((mask) >> COLOR_OFFSET)
 
 /* The maximum number of moves is 343. Or at least I haven't thought up a scenario
  * where more than that could fit on a single board. My justification is that the most

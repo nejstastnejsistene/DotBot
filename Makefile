@@ -1,7 +1,7 @@
 CC = gcc
 CFLAGS = -Wall -Wextra -Werror -ansi -pedantic -O3
 
-TARGETS = server benchmark
+TARGETS = server benchmark compute_cycles
 OBJECTS = dots.o
 LIBRARIES = -lm -lwebsockets -ljson-c
 

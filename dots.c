@@ -138,7 +138,7 @@ int apply_move(grid_t grid, mask_t move) {
     int col, row, shrink, has_cycle = HAS_CYCLE(move), num_dots = 0;
     color_t cycle_color;
     if (has_cycle) {
-        cycle_color = CYCLE_COLOR(move);
+        cycle_color = GET_CYCLE_COLOR(move);
     }
     for (col = 0; col < NUM_COLS; col++) {
         for (row = 0; row < NUM_ROWS; row++) {
@@ -337,58 +337,89 @@ mask_t path_to_mask(path_t path, int start, int end) {
     return mask;
 }
 
-void mask_to_path(mask_t mask, int *path_length, path_t path) {
-    int i, start_index = -1, min_neighbors = -1;
-    int num_neighbors;
+/* Find a path through a mask. Returns the length of the path stored in `path`. The length is 0 if no path was found. */
+int _mask_to_path(mask_t mask, mask_t visited, int index, int edges[NUM_DOTS][NUM_DOTS], int path_length, path_t path) {
+    int j, num_neighbors, nowhere_to_go;
     neighbors_t neighbors;
 
-    int has_cycle = HAS_CYCLE(mask);
-    mask = REMOVE_CYCLE_INFO(mask);
+    /* All of the branches of this DFS share the same buffer for path, but that's okay because it
+     * quits as soon as it finds a path that uses all of the dots.
+     */
+    path[path_length++] = index;
+    visited = ADD_TO_MASK(visited, index);
 
-    for (i = 0; i < NUM_DOTS; i++) {
-        if (MASK_CONTAINS(mask, i)) {
-            get_neighbors(mask, i, &num_neighbors, neighbors);
-            if (min_neighbors == -1 || num_neighbors < min_neighbors) {
-                start_index = i;
-                min_neighbors = num_neighbors;
+    nowhere_to_go = 1;
+    get_neighbors(mask, index, &num_neighbors, neighbors);
+    for (j = 0; j < num_neighbors; j++) {
+        int new_index = neighbors[j];
+
+        /* Don't follow the same edge twice. */
+        if (!edges[index][new_index]) {
+            int final_path_length, new_edges[NUM_DOTS][NUM_DOTS];
+
+            nowhere_to_go = 0;
+
+            /* Make a copy of the edges and mark the edge about to be traversed. */
+            memcpy(new_edges, edges, sizeof(new_edges));
+            new_edges[index][new_index] = 1;
+            new_edges[new_index][index] = 1;
+
+            final_path_length= _mask_to_path(mask, visited, new_index, new_edges, path_length, path);
+            if (final_path_length > 0) {
+                return final_path_length;
             }
         }
     }
 
-    *path_length = 0;
-    i = start_index;
-    while (mask) {
-        path[(*path_length)++] = i;
-        mask = REMOVE_FROM_MASK(mask, i);
-        get_neighbors(mask, i, &num_neighbors, neighbors);
-        i = neighbors[0];
+    /* End condition: all dots have been visited and there is nowhere left to go.
+     * This works even for cycles where it might visit the same dot twice. */
+    if (mask == visited && nowhere_to_go) {
+        return path_length;
     }
-    if (has_cycle) {
-        path[(*path_length)++] = path[0];
+
+    /* No path was found. */
+    return 0;
+}
+
+/* Solve for the sequence of points that goes through all of the points in `mask`. Works with cycles. */
+void mask_to_path(mask_t mask, int *path_length, path_t path) {
+    int i;
+    mask &= ALL_DOTS;
+
+    /* Look for a path starting at each dot, until one is found. */
+    for (i = 0; i < NUM_DOTS; i++) {
+        if (MASK_CONTAINS(mask, i)) {
+            int edges[NUM_DOTS][NUM_DOTS] = {{0}};
+            *path_length = _mask_to_path(mask, EMPTY_MASK, i, edges, 0, path);
+            if (*path_length > 0) {
+                return;
+            }
+        }
     }
 }
 
-/* Count the occupied neighbor dots, i.e. the degree of a node. */
+/* Count the occupied neighbor dots, i.e. the degree of a node. Directions are in counter-clockwise order. */
 void get_neighbors(mask_t mask, int i, int *num_neighbors, neighbors_t neighbors) {
     int row = INDEX_ROW(i);
     int col = INDEX_COL(i);
 
     *num_neighbors = 0;
+    mask &= ALL_DOTS;
 
-    i = MASK_INDEX(row-1, col);
-    if (row-1 >= 0 && MASK_CONTAINS(mask, i)) {
+    i = MASK_INDEX(row-1, col); /* Up */
+    if (MASK_CONTAINS(mask, i)) {
         neighbors[(*num_neighbors)++] = i;
     }
-    i = MASK_INDEX(row+1, col);
-    if (row+1 < NUM_ROWS && MASK_CONTAINS(mask, i)) {
+    i = MASK_INDEX(row, col-1); /* Left */
+    if (MASK_CONTAINS(mask, i)) {
         neighbors[(*num_neighbors)++] = i;
     }
-    i = MASK_INDEX(row, col-1);
-    if (col-1 >= 0 && MASK_CONTAINS(mask, i)) {
+    i = MASK_INDEX(row+1, col); /* DOWN */
+    if (MASK_CONTAINS(mask, i)) {
         neighbors[(*num_neighbors)++] = i;
     }
-    i = MASK_INDEX(row, col+1);
-    if (col-1 < NUM_COLS && MASK_CONTAINS(mask, i)) {
+    i = MASK_INDEX(row, col+1); /* Right */
+    if (MASK_CONTAINS(mask, i)) {
         neighbors[(*num_neighbors)++] = i;
     }
 }
