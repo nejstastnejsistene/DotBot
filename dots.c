@@ -81,8 +81,13 @@ void _choose_move(grid_t grid, int allow_shrinkers, int turns_remaining, int cer
         int score;
         float value;
         grid_t new_grid;
-        memcpy(new_grid, grid, sizeof(grid_t));
-        score = apply_move(new_grid, moves[i]);
+
+        if (turns_remaining > 1 || HAS_CYCLE(moves[i])) {
+            memcpy(new_grid, grid, sizeof(grid_t));
+            score = apply_move(new_grid, moves[i]);
+        } else {
+            score = num_dots(moves[i]);
+        }
 
         value = pow(score, certainty / 720.0);
 
@@ -104,7 +109,7 @@ void _choose_move(grid_t grid, int allow_shrinkers, int turns_remaining, int cer
     *move = best_move;
 }
 
-#define MAX_DEPTH 3
+#define MAX_DEPTH 4
 
 mask_t choose_move(grid_t grid, int allow_shrinkers, int turns_remaining) {
     float value;
