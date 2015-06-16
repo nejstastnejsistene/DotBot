@@ -52,6 +52,7 @@ typedef uint64_t mask_t;
 
 #define EMPTY_MASK                  ((mask_t) 0)
 #define SINGLETON_MASK(i)           (((mask_t) 1) << (i))
+#define ALL_DOTS                    (SINGLETON_MASK(NUM_DOTS) - 1)
 #define MASK_CONTAINS(mask, i)      (!!(SINGLETON_MASK(i) & (mask)))
 #define ADD_TO_MASK(mask, i)        ((mask) | SINGLETON_MASK(i))
 #define REMOVE_FROM_MASK(mask, i)   ((mask) & ~SINGLETON_MASK(i))
@@ -59,14 +60,6 @@ typedef uint64_t mask_t;
 #define INDEX_ROW(i)                ((i) % NUM_COLS)
 #define INDEX_COL(i)                ((i) / NUM_COLS)
 #define MASK_INDEX(row, col)        (NUM_COLS * (col) + (row)) 
-
-#define CYCLE_FLAG_INDEX            NUM_DOTS
-#define COLOR_OFFSET                (CYCLE_FLAG_INDEX + 1)
-#define ENCODE_CYCLE_COLOR(color)   (((mask_t)(color)) << COLOR_OFFSET)
-#define SET_CYCLE(mask, color)      (ADD_TO_MASK(mask, CYCLE_FLAG_INDEX) | ENCODE_CYCLE_COLOR(color))
-#define HAS_CYCLE(mask)             MASK_CONTAINS(mask, CYCLE_FLAG_INDEX)
-#define CYCLE_COLOR(mask)           ((mask) >> COLOR_OFFSET)
-#define REMOVE_CYCLE_INFO(mask)     ((mask) & (SINGLETON_MASK(NUM_DOTS) - 1))
 
 /* The maximum number of moves is 343. Or at least I haven't thought up a scenario
  * where more than that could fit on a single board. My justification is that the most
@@ -131,5 +124,7 @@ mask_t path_to_mask(path_t, int, int);
 void mask_to_path(mask_t, int*, path_t);
 
 void get_neighbors(mask_t, int, int*, neighbors_t);
+
+int num_dots(mask_t);
 
 #endif

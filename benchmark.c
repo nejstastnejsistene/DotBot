@@ -4,7 +4,7 @@
 #include <string.h>
 #include <sys/time.h>
 
-#include "dots.h"
+#include "dotbot.h"
 
 #define DEFAULT_NUM_GAMES 1000
 #define NUM_TURNS 35
@@ -18,7 +18,7 @@ int play_game(int num_turns, int allow_shrinkers) {
     for (turn = num_turns; turn > 0; turn--) {
         mask_t move = choose_move(grid, allow_shrinkers, turn);
         score += apply_move(grid, move);
-        fill_grid(grid, HAS_CYCLE(move) ? CYCLE_COLOR(move) : EMPTY);
+        fill_grid(grid, GET_CYCLE_COLOR(move));
     }
 
     return score;
