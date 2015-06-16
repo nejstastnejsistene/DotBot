@@ -132,4 +132,6 @@ void mask_to_path(mask_t, int*, path_t);
 
 void get_neighbors(mask_t, int, int*, neighbors_t);
 
+int num_dots(mask_t);
+
 #endif

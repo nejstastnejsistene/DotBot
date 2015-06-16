@@ -6,6 +6,7 @@
 #include <math.h>
 
 #include "dots.h"
+#include "cycles.h"
 
 /* Pretty print a grid using ANSI color codes and unicode dots. */
 void pprint_grid(grid_t grid) {
@@ -168,10 +169,8 @@ void get_moves(grid_t grid, int allow_shrinkers, int *num_moves, move_list_t mov
         color_mask = get_color_mask(grid, color);
         separate_cycles(color_mask, &cycles, &no_cycles);
         if (cycles) {
-            /* TODO: find more cycles besides squares */
-            find_square(cycles, color, num_moves, moves);
+            no_cycles |= get_cycles(cycles, color, num_moves, moves);
         }
-        /* DFS on the dots without cycles. */
         if (no_cycles) {
             get_paths(no_cycles, allow_shrinkers, num_moves, moves);
         }
@@ -221,21 +220,6 @@ void separate_cycles(mask_t mask, mask_t *cycles, mask_t *no_cycles) {
                 }
                 j = neighbors[0];
                 get_neighbors(*cycles, j, &num_neighbors, neighbors);
-            }
-        }
-    }
-}
-
-#define SQUARE ((mask_t)(3 | (3 << NUM_ROWS)))
-
-void find_square(mask_t mask, color_t color, int *num_moves, move_list_t moves) {
-    int col, row;
-    mask_t square;
-    for (col = 0; col < NUM_COLS - 1; col++) {
-        for (row = 0; row < NUM_ROWS - 1; row++) {
-            square = SQUARE << MASK_INDEX(row, col);
-            if ((mask & square) == square) {
-                moves[(*num_moves)++] = SET_CYCLE(square, color);
             }
         }
     }
@@ -407,19 +391,29 @@ void get_neighbors(mask_t mask, int i, int *num_neighbors, neighbors_t neighbors
     mask &= ALL_DOTS;
 
     i = MASK_INDEX(row-1, col); /* Up */
-    if (MASK_CONTAINS(mask, i)) {
+    if (row-1 >= 0 && MASK_CONTAINS(mask, i)) {
         neighbors[(*num_neighbors)++] = i;
     }
     i = MASK_INDEX(row, col-1); /* Left */
-    if (MASK_CONTAINS(mask, i)) {
+    if (col-1 >= 0 && MASK_CONTAINS(mask, i)) {
         neighbors[(*num_neighbors)++] = i;
     }
     i = MASK_INDEX(row+1, col); /* DOWN */
-    if (MASK_CONTAINS(mask, i)) {
+    if (row+1 < NUM_ROWS && MASK_CONTAINS(mask, i)) {
         neighbors[(*num_neighbors)++] = i;
     }
     i = MASK_INDEX(row, col+1); /* Right */
-    if (MASK_CONTAINS(mask, i)) {
+    if (col+ 1 < NUM_COLS && MASK_CONTAINS(mask, i)) {
         neighbors[(*num_neighbors)++] = i;
     }
+}
+
+int num_dots(mask_t mask) {
+    int count = 0;
+    mask &= ALL_DOTS;
+    while (mask) {
+        mask ^= mask & -mask;
+        count++;
+    }
+    return count;
 }

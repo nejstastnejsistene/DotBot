@@ -61,13 +61,34 @@ mask_t get_encircled_dots(mask_t mask) {
 }
 
 int main() {
-    int i;
+    int i, col, row;
+
+    for (col = 0; col < NUM_COLS - 1; col++) {
+        for (row = 0; row < NUM_ROWS - 1; row++) {
+            mask_t square = EMPTY_MASK;
+            square |= ((mask_t)3) << MASK_INDEX(row, col);
+            square |= ((mask_t)3) << MASK_INDEX(row, col + 1);
+            printf("%" PRId64 " %" PRId64 "\n", square, EMPTY_MASK);
+        }
+    }
 
     /* Try each permuation of the center 16 dots that could be encircled by a cycle. */
     for (i = 1; i < (1 << 16); i++) {
         mask_t encircled_dots, mask, inside_dots;
-        int j, path_length;
-        path_t path;
+        int j;
+
+        /* Skip the two disconnected masks:
+         *
+         * X X X                       X X X
+         * X   X                       X   X
+         * X X X          and          X X X
+         *       X X X           X X X
+         *       X   X           X   X
+         *       X X X           X X X
+         */
+        if (i == ((1<< 0)|(1<<15)) || i == ((1<<4)|(1<<12))) {
+            continue;
+        }
 
         /* Move the 16 bits into the center 16 dots of a mask. */
         encircled_dots = EMPTY_MASK;
@@ -102,23 +123,6 @@ int main() {
          */
         inside_dots = get_encircled_dots(mask);
         if (inside_dots != encircled_dots) {
-            continue;
-        }
-
-        /* Only consider cycles that we can actually find a solution to. The cycles affected
-         * by this check are kind of dumb like this:
-         *
-         * X X X
-         * X   X
-         * X X X
-         *       X X X
-         *       X   X
-         *       X X X
-         *
-         * It's a good sanity check nonetheless.
-         */
-        mask_to_path(SET_CYCLE(mask, EMPTY), &path_length, path);
-        if (path_length == 0) {
             continue;
         }
 

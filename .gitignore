@@ -35,6 +35,7 @@
 server
 benchmark
 compute_cycles
+cycle_literals.h
 main.css
 main.js
 main.*.map
