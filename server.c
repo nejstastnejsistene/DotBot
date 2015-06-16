@@ -25,19 +25,9 @@ struct per_session_data {
 };
 
 static void init_session_data(struct per_session_data *data) {
-    int row, col;
     data->new_game = 1;
     memset(data->grid, 0, sizeof(data->grid));
-    /*fill_grid(data->grid, EMPTY);*/
-    for (row = 0; row < NUM_ROWS; row++) {
-        for (col = 0; col < NUM_COLS; col++) {
-            color_t color = RED;
-            if (col == 0 || col == 5 || row == 0 || row == 5) {
-                color = GREEN;
-            }
-            data->grid[col] = SET_COLUMN_COLOR(data->grid[col], row, color);
-        }
-    }
+    fill_grid(data->grid, EMPTY);
 }
 
 static void set_grid(struct per_session_data *data, const char *buf) {
