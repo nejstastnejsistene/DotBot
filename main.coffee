@@ -139,7 +139,7 @@ class Dots
     @root.appendChild dot.element
 
   # Draw a path through the dots.
-  drawPath: (path, newGrid, next) ->
+  drawPath: (@path, newGrid, next) ->
     # Recursively draw each path segment.
     drawNextSegment = (remainingPath, n) =>
       if @selectDot @getDot(remainingPath[0]...)
@@ -167,13 +167,7 @@ class Dots
   selectDot: (dot, checkForCycle = true) ->
     # Detect cycles by trying to reselect an already selected dot.
     if checkForCycle and dot.markedForDeletion
-      # If a cycle is found, select each dot of that color.
-      @root.dataset.color = color = dot.color()
-      for r in [0..5]
-        for c in [0..5]
-          if (dot = @getDot r, c).color() is color
-            @selectDot dot, false
-      return true
+      return @completeSquare dot.color()
 
     # Keep track of which dots need to be removed later.
     if not dot.markedForDeletion
@@ -187,6 +181,54 @@ class Dots
     dot.selection.animateSelection()
     @root.appendChild dot.selection.element
     return false
+
+  # Complete a square, selecting all of the dots that ought to be popped.
+  completeSquare: (color) ->
+    @root.dataset.color = color
+    # Shrink all dots of the same color.
+    for r in [0..5]
+      for c in [0..5]
+        if (dot = @getDot r, c).color() is color
+          @selectDot dot, false
+    # Shrink the encircled dots.
+    for dot in @getEncircledDots @path
+      @selectDot dot, false
+
+  # Find the dots that are encircled by a path. These dots are shrunk along
+  # with the path when a square is made.
+  getEncircledDots: (path) ->
+    # Flood fill a grid using the path as the boundary. The dots not
+    # reach are encircled by the path.
+    visited = ([] for r in [0..5])
+    visited[r][c] = true for [r, c] in path
+    @floodFill visited
+    # Create an array of the points that haven't been visited.
+    encircled = []
+    for r in [0..5]
+      for c in [0..5]
+        if not visited[r][c]
+          encircled.push @getDot r, c
+    encircled
+
+  # Perform a flood fill starting from the edges of the grid.
+  floodFill: (visited) ->
+    flood = (r, c) ->
+      # Don't continue if out of bounds or if already visited.
+      if r < 0 or c < 0 or r > 5 or c > 5 or visited[r][c]
+        return
+      visited[r][c] = true
+      # Flood each neighbor (including diagonals).
+      for i in [-1..1]
+        for j in [-1..1]
+          if i isnt j
+            flood r + i, c + j
+    # Flood the border.
+    for i in [0..5]
+      flood i, 0
+      flood i, 5
+      flood 0, i
+      flood 5, i
+    visited
 
   # Create a path segment between two points. It will animate itself via CSS.
   newPathSegment: ([r1, c1], [r2, c2]) ->
