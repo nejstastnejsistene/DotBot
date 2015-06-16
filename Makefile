@@ -13,7 +13,7 @@ debug: all
 $(TARGETS) : % : %.c $(OBJECTS)
 	$(CC) $(CFLAGS) -o $@ $^ $(LIBRARIES)
 
-%.o: %.c %.h cycle_literals.h
+%.o: %.c cycle_literals.h
 	$(CC) $(CFLAGS) -c $< $(LIBRARIES)
 
 cycle_literals.h: compute_cycles generate_cycle_literals_h.py

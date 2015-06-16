@@ -61,13 +61,6 @@ typedef uint64_t mask_t;
 #define INDEX_COL(i)                ((i) / NUM_COLS)
 #define MASK_INDEX(row, col)        (NUM_COLS * (col) + (row)) 
 
-#define CYCLE_FLAG_INDEX            NUM_DOTS
-#define COLOR_OFFSET                (CYCLE_FLAG_INDEX + 1)
-#define ENCODE_CYCLE_COLOR(color)   (((mask_t)(color)) << COLOR_OFFSET)
-#define SET_CYCLE(mask, color)      (ADD_TO_MASK(mask, CYCLE_FLAG_INDEX) | ENCODE_CYCLE_COLOR(color))
-#define HAS_CYCLE(mask)             MASK_CONTAINS(mask, CYCLE_FLAG_INDEX)
-#define GET_CYCLE_COLOR(mask)       ((mask) >> COLOR_OFFSET)
-
 /* The maximum number of moves is 343. Or at least I haven't thought up a scenario
  * where more than that could fit on a single board. My justification is that the most
  * moves are computed from the DFS, which makes n(n+1)/2 moves (this is understandably

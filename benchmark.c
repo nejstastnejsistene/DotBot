@@ -4,7 +4,7 @@
 #include <string.h>
 #include <sys/time.h>
 
-#include "dots.h"
+#include "dotbot.h"
 
 #define DEFAULT_NUM_GAMES 1000
 #define NUM_TURNS 35

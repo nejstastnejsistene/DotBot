@@ -5,8 +5,7 @@
 
 #include <math.h>
 
-#include "dots.h"
-#include "cycles.h"
+#include "dotbot.h"
 
 /* Pretty print a grid using ANSI color codes and unicode dots. */
 void pprint_grid(grid_t grid) {
@@ -137,14 +136,17 @@ void fill_grid(grid_t grid, color_t exclude) {
  */
 int apply_move(grid_t grid, mask_t move) {
     int col, row, shrink, has_cycle = HAS_CYCLE(move), num_dots = 0;
+    mask_t encircled;
     color_t cycle_color;
     if (has_cycle) {
+        encircled = encircled_dots[GET_CYCLE_NUMBER(move)];
         cycle_color = GET_CYCLE_COLOR(move);
     }
     for (col = 0; col < NUM_COLS; col++) {
         for (row = 0; row < NUM_ROWS; row++) {
             shrink = MASK_CONTAINS(move, MASK_INDEX(row, col));
             if (has_cycle) {
+                shrink |= MASK_CONTAINS(encircled, MASK_INDEX(row, col));
                 shrink |= GET_COLUMN_COLOR(grid[col], row) == cycle_color;
             }
             if (shrink) {
