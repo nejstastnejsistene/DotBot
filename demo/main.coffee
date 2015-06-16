@@ -141,21 +141,29 @@ class Dots
   # Draw a path through the dots.
   drawPath: (path, newGrid, next) ->
     # Recursively draw each path segment.
-    do drawNextSegment = (path) =>
-      @selectDot @getDot(path[0]...)
+    drawNextSegment = (remainingPath, n) =>
+      if @selectDot @getDot(remainingPath[0]...)
+        audio.playSquare n
+      else if path.length is 1
+        audio.playShrinker()
+      else
+        audio.playDot n
       # If there are at least two dots left, draw the next segment.
-      if path.length > 1
-        segment = @newPathSegment path[0], path[1]
+      if remainingPath.length > 1
+        segment = @newPathSegment remainingPath[0], remainingPath[1]
         # Schedule the rest of the path to be drawn once the animation finishes.
         segment.addEventListener 'animationend', ->
-          drawNextSegment(path.slice 1)
+          drawNextSegment remainingPath.slice(1), n + 1
         @root.appendChild segment
       # On the last dot, pause for a while and then shrink the dots.
-      else if path.length is 1
+      else if remainingPath.length is 1
         setTimeout @clearPath.bind(this, newGrid, next), @clearPathDelay
 
-  # Mark a dot as selected. If the selected dot forms a cycle, it selects
-  # all dots of that color like it does in the game.
+    drawNextSegment path, 1
+
+  # Mark a dot as selected. If the selected dot forms a cycle, it selects all
+  # dots of that color like it does in the game. Returns whether a cycle was
+  # completed.
   selectDot: (dot, checkForCycle = true) ->
     # Detect cycles by trying to reselect an already selected dot.
     if checkForCycle and dot.markedForDeletion
@@ -165,7 +173,7 @@ class Dots
         for c in [0..5]
           if (dot = @getDot r, c).color() is color
             @selectDot dot, false
-      return
+      return true
 
     # Keep track of which dots need to be removed later.
     if not dot.markedForDeletion
@@ -178,6 +186,7 @@ class Dots
     dot.selection = new Dot(dot.row(), dot.col(), dot.color())
     dot.selection.animateSelection()
     @root.appendChild dot.selection.element
+    return false
 
   # Create a path segment between two points. It will animate itself via CSS.
   newPathSegment: ([r1, c1], [r2, c2]) ->
@@ -227,3 +236,40 @@ class Dot
   animateAndRemove: (className) ->
     @element.classList.add className
     @element.addEventListener 'animationend', (e) -> e.target.remove()
+
+
+# Loads and plays sound assets.
+audio = new class
+
+  minDot: 1
+  maxDot: 13
+  minSquare: 4
+  maxSquare: 12
+
+  constructor: ->
+    @shrinker = new Audio('assets/crunch.aif')
+    @dots = []
+    for i in [@minDot..@maxDot]
+      @dots[i] = new Audio("assets/#{i}.aif")
+    @squares = []
+    for i in [@minSquare..@maxSquare]
+      @squares[i] = new Audio("assets/square_#{i}.aif")
+
+  playShrinker: -> @play @shrinker
+
+  # Play the sound made by selecting the nth dot in a path. This starts by
+  # going up in pitch back starts going back down again after the 13th dot.
+  playDot: (n) ->
+    numDots = @maxDot - @minDot + 1
+    seqLength = 2 * numDots - 2    # Length of repeating sequence.
+    seqIndex = (n - 1) % seqLength # Index within repeating sequence.
+    i = if seqIndex < numDots then seqIndex else seqLength - seqIndex
+    @play @dots[i + @minDot]
+
+  # Play the sound made when a square is completed on its nth dot.
+  playSquare: (n) ->
+    @play @squares[Math.max @minSquare, Math.min(@maxSquare, n)]
+
+  play: (audio) ->
+    audio.currentTime = 0
+    audio.play()
