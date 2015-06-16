@@ -171,9 +171,8 @@ void get_moves(grid_t grid, int allow_shrinkers, int *num_moves, move_list_t mov
         color_mask = get_color_mask(grid, color);
         separate_cycles(color_mask, &cycles, &no_cycles);
         if (cycles) {
-            no_cycles |= get_cycles(cycles, color, num_moves, moves);
-        }
-        if (no_cycles) {
+            get_cycles(cycles, color, num_moves, moves);
+        } else {
             get_paths(no_cycles, allow_shrinkers, num_moves, moves);
         }
     }

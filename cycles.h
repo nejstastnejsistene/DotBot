@@ -3,6 +3,10 @@
 
 #include "cycle_literals.h"
 
+/* Cycles are encoded with additional information: a bit indicating the mask is a cycle,
+ * the color of the cycle, and the number of the cycle so the dots it encircles can be
+ * looked up easily.
+ */
 #define CYCLE_FLAG_INDEX                NUM_DOTS
 #define CYCLE_COLOR_OFFSET              (CYCLE_FLAG_INDEX + 1)
 #define CYCLE_NUMBER_OFFSET             (CYCLE_COLOR_OFFSET + BITS_PER_COLOR)
@@ -15,6 +19,6 @@
 #define GET_CYCLE_COLOR(mask)           (((mask) >> CYCLE_COLOR_OFFSET) & ((1 << BITS_PER_COLOR)- 1))
 #define GET_CYCLE_NUMBER(mask)          ((mask) >> CYCLE_NUMBER_OFFSET)
 
-mask_t get_cycles(mask_t, color_t, int*, move_list_t);
+void get_cycles(mask_t, color_t, int*, move_list_t);
 
 #endif
