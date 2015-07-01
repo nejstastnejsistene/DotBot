@@ -121,7 +121,6 @@ class Dots
           if r isnt nextRowToFill
             dot.row nextRowToFill
             @setDot nextRowToFill, c, dot
-            @delDot r, c
           nextRowToFill -= 1
       # Fill in the new dots.
       if nextRowToFill >= 0
@@ -131,7 +130,7 @@ class Dots
 
   # Create a new dot in the DOM. The dot is created in a "hidden row" above the
   # visibile grid, and is then moved to it's proper place via a nice CSS
-  # transition that animates it falling into place.
+  # animation that animates it falling into place.
   newDot: (r, c) ->
     dot = new Dot(r, c, @grid[r][c])
     dot.animateFall()
@@ -141,8 +140,9 @@ class Dots
   # Draw a path through the dots.
   drawPath: (@path, newGrid, next) ->
     # Recursively draw each path segment.
-    drawNextSegment = (remainingPath, n) =>
-      if @selectDot @getDot(remainingPath[0]...)
+    drawNextSegment = (remainingPath, n, cycleCompleted = false) =>
+      if @selectDot @getDot(remainingPath[0]...), not cycleCompleted
+        cycleCompleted = true
         audio.playSquare n
       else if path.length is 1
         audio.playShrinker()
@@ -152,8 +152,9 @@ class Dots
       if remainingPath.length > 1
         segment = @newPathSegment remainingPath[0], remainingPath[1]
         # Schedule the rest of the path to be drawn once the animation finishes.
-        segment.addEventListener 'animationend', ->
-          drawNextSegment remainingPath.slice(1), n + 1
+        for event in ['animationend', 'webkitAnimationEnd']
+          segment.addEventListener event, ->
+            drawNextSegment remainingPath.slice(1), n + 1, cycleCompleted
         @root.appendChild segment
       # On the last dot, pause for a while and then shrink the dots.
       else if remainingPath.length is 1
