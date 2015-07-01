@@ -146,6 +146,7 @@ class Dots
     drawNextSegment = (remainingPath, n, cycleCompleted = false) =>
       if @selectDot @getDot(remainingPath[0]...), not cycleCompleted
         cycleCompleted = true
+        audio.playDot n
         audio.playSquare n
       else if path.length is 1
         audio.playShrinker()
@@ -293,15 +294,14 @@ class Dot
 # Loads and plays sound assets.
 audio = new class
 
-  minDot: 1
-  maxDot: 13
+  dotIndex: [1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
   minSquare: 4
   maxSquare: 12
 
   constructor: ->
     @shrinker = new Audio('assets/crunch.aif')
     @dots = []
-    for i in [@minDot..@maxDot]
+    for i in @dotIndex
       @dots[i] = new Audio("assets/#{i}.aif")
     @squares = []
     for i in [@minSquare..@maxSquare]
@@ -312,11 +312,10 @@ audio = new class
   # Play the sound made by selecting the nth dot in a path. This starts by
   # going up in pitch back starts going back down again after the 13th dot.
   playDot: (n) ->
-    numDots = @maxDot - @minDot + 1
-    seqLength = 2 * numDots - 2    # Length of repeating sequence.
-    seqIndex = (n - 1) % seqLength # Index within repeating sequence.
-    i = if seqIndex < numDots then seqIndex else seqLength - seqIndex
-    @play @dots[i + @minDot]
+    seqLength = 2 * @dotIndex.length - 2 # Length of repeating sequence.
+    seqIndex = (n - 1) % seqLength       # Index within repeating sequence.
+    i = if seqIndex < @dotIndex.length then seqIndex else seqLength - seqIndex
+    @play @dots[@dotIndex[i]]
 
   # Play the sound made when a square is completed on its nth dot.
   playSquare: (n) ->
