@@ -23,6 +23,8 @@ typedef enum {
     NUM_COLORS
 } color_t;
 
+#define RAND_COLOR ((color_t)(RED + rand() % (VIOLET - RED + 1)))
+
 /* Column major array. Each column is stored as a bitmask of 6 3-bit colors. */
 typedef uint32_t column_t;
 typedef column_t grid_t[NUM_COLS];
@@ -93,11 +95,13 @@ void pprint_grid(grid_t);
 
 void pprint_mask(mask_t, color_t, color_t);
 
-mask_t naive_choose_move(grid_t, int);
-mask_t choose_move(grid_t, int, int);
+mask_t choose_move_greedy(grid_t, int, int*);
+mask_t choose_move(grid_t, int, int, int*);
+
+#define SHOULD_SHRINK_RANDOM(num_moves, allow_shrinkers) ((num_moves) == ((allow_shrinkers) ? NUM_DOTS : 0))
+mask_t random_mask();
 
 void fill_grid(grid_t, color_t);
-
 int apply_move(grid_t, mask_t);
 
 void get_moves(grid_t, int, int*, move_list_t);

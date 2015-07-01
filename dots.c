@@ -42,13 +42,19 @@ void pprint_mask(mask_t mask, color_t fg, color_t bg) {
 }
 
 /* Naively choose the move that will shrink the most dots. */
-mask_t naive_choose_move(grid_t grid, int allow_shrinkers) {
+mask_t choose_move_greedy(grid_t grid, int allow_shrinkers, int *no_moves) {
     mask_t move = EMPTY_MASK;
     int i, num_dots, max_dots = -1;
 
     int num_moves;
     move_list_t moves;
     get_moves(grid, allow_shrinkers, &num_moves, moves);
+
+    *no_moves = 0;
+    if (SHOULD_SHRINK_RANDOM(num_moves, allow_shrinkers)) {
+        *no_moves = 1;
+        return random_mask();
+    }
 
     for (i = 0; i < num_moves; i++) {
         grid_t new_grid;
@@ -68,7 +74,7 @@ mask_t naive_choose_move(grid_t grid, int allow_shrinkers) {
  *                            | 1/5 if shrunk by a regular move
  *                            | 1   otherwise
  */
-void _choose_move(grid_t grid, int allow_shrinkers, int turns_remaining, int certainty, float *value, mask_t *move) {
+void _choose_move(grid_t grid, int allow_shrinkers, int turns_remaining, int certainty, float *value, mask_t *move, int *no_moves) {
     float best_value = -1;
     mask_t best_move = EMPTY_MASK;
 
@@ -76,6 +82,13 @@ void _choose_move(grid_t grid, int allow_shrinkers, int turns_remaining, int cer
     move_list_t moves;
 
     get_moves(grid, allow_shrinkers, &num_moves, moves);
+
+    if (certainty == 720 && SHOULD_SHRINK_RANDOM(num_moves, allow_shrinkers)) {
+        *move = random_mask();
+        *value = num_dots(*move);
+        *no_moves = 1;
+        return;
+    }
 
     for (i = 0; i < num_moves; i++) {
         int score;
@@ -95,7 +108,7 @@ void _choose_move(grid_t grid, int allow_shrinkers, int turns_remaining, int cer
             int next_certainty = certainty - score * (HAS_CYCLE(moves[i]) ? 15 : 16);
             float next_value;
             mask_t next_move;
-            _choose_move(new_grid, allow_shrinkers, turns_remaining - 1, next_certainty, &next_value, &next_move);
+            _choose_move(new_grid, allow_shrinkers, turns_remaining - 1, next_certainty, &next_value, &next_move, NULL);
             value += next_value;
         }
 
@@ -111,12 +124,26 @@ void _choose_move(grid_t grid, int allow_shrinkers, int turns_remaining, int cer
 
 #define MAX_DEPTH 4
 
-mask_t choose_move(grid_t grid, int allow_shrinkers, int turns_remaining) {
+mask_t choose_move(grid_t grid, int allow_shrinkers, int turns_remaining, int *no_moves) {
     float value;
     mask_t move;
     int depth = (turns_remaining > MAX_DEPTH) ? MAX_DEPTH : turns_remaining;
-    _choose_move(grid, allow_shrinkers, depth, 720, &value, &move);
+    *no_moves = 0;
+    _choose_move(grid, allow_shrinkers, depth, 720, &value, &move, no_moves);
     return move;
+}
+
+mask_t random_mask() {
+    mask_t mask = EMPTY_MASK;
+    int col, row;
+    for (col = 0; col < NUM_COLS; col++) {
+        for (row = 0; row < NUM_ROWS; row++) {
+            if (RAND_COLOR == RED) {
+                mask = ADD_TO_MASK(mask, MASK_INDEX(row, col));
+            }
+        }
+    }
+    return mask;
 }
 
 /* Randomly fill a grid with dots. A color can be excluded to simulate the situation
@@ -129,7 +156,7 @@ void fill_grid(grid_t grid, color_t exclude) {
     for (col = 0; col < NUM_COLS; col++) {
         for (row = 0; row < NUM_ROWS; row++) {
             if (GET_COLUMN_COLOR(grid[col], row) == EMPTY) {
-                while ((color = RED + rand() % (VIOLET - RED + 1)) == exclude);
+                while ((color = RAND_COLOR) == exclude);
                 grid[col] = SET_COLUMN_COLOR(grid[col], row, color);
             }
         }

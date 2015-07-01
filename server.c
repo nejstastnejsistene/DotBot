@@ -76,14 +76,32 @@ static json_object *json_grid(grid_t grid) {
     return jgrid;
 }
 
+static json_object *json_coord(int index) {
+    json_object *jcoord = json_object_new_array();
+    json_object_array_add(jcoord, json_object_new_int(INDEX_ROW(index)));
+    json_object_array_add(jcoord, json_object_new_int(INDEX_COL(index)));
+    return jcoord;
+}
+
+static json_object *json_shrink_random(mask_t mask) {
+    json_object *jdots = json_object_new_array();
+    int row, col;
+    for (row = 0; row < NUM_ROWS; row++) {
+        for (col = 0; col < NUM_ROWS; col++) {
+            int i = MASK_INDEX(row, col);
+            if (MASK_CONTAINS(mask, i)) {
+                json_object_array_add(jdots, json_coord(i));
+            }
+        }
+    }
+    return jdots;
+}
+
 static json_object *json_path(int path_length, path_t path) {
     json_object *jpath = json_object_new_array();
     int i;
     for (i = 0; i < path_length; i++) {
-        json_object *jcoord = json_object_new_array();
-        json_object_array_add(jcoord, json_object_new_int(INDEX_ROW(path[i])));
-        json_object_array_add(jcoord, json_object_new_int(INDEX_COL(path[i])));
-        json_object_array_add(jpath, jcoord);
+        json_object_array_add(jpath, json_coord(path[i]));
     }
     return jpath;
 }
@@ -92,7 +110,9 @@ static void tick(int *len, char *buf, struct per_session_data *data) {
     int path_length = 0;
     path_t path;
 
-    json_object *obj;
+    mask_t random_dots = EMPTY_MASK;
+
+    json_object *result;
     const char *s;
 
     /* If it's a new game, only send the grid and don't compute a move. */
@@ -102,6 +122,7 @@ static void tick(int *len, char *buf, struct per_session_data *data) {
         struct timeval tv;
         long ms;
         mask_t move;
+        int no_moves;
 
         gettimeofday(&tv, NULL);
         ms = (tv.tv_sec * 1000) + (tv.tv_usec / 1000);
@@ -110,24 +131,34 @@ static void tick(int *len, char *buf, struct per_session_data *data) {
         }
         data->last_updated = ms;
 
-        move = choose_move(data->grid, 1, 3);
+        move = choose_move(data->grid, 0, 100, &no_moves);
         apply_move(data->grid, move);
         fill_grid(data->grid, GET_CYCLE_COLOR(move));
-        mask_to_path(move, &path_length, path);
+        if (no_moves) {
+            random_dots = move;
+        } else {
+            mask_to_path(move, &path_length, path);
+        }
     }
 
-    obj = json_object_new_object();
-    json_object_object_add(obj, "grid", json_grid(data->grid));
+    result = json_object_new_object();
+    json_object_object_add(result, "grid", json_grid(data->grid));
+    if (path_length == 0 && random_dots == EMPTY_MASK) {
+        json_object_object_add(result, "newGrid", json_object_new_boolean(TRUE));
+    }
+    if (random_dots) {
+        json_object_object_add(result, "shrinkRandom", json_shrink_random(random_dots));
+    }
     if (path_length) {
-        json_object_object_add(obj, "path", json_path(path_length, path));
+        json_object_object_add(result, "path", json_path(path_length, path));
     }
 
-    s = json_object_to_json_string(obj);
+    s = json_object_to_json_string(result);
     *len = strlen(s);
     memcpy(buf, s, *len);
     buf[*len] = 0;
 
-    json_object_put(obj);
+    json_object_put(result);
 }
 
 static int dotbot_stream_callback(struct libwebsocket_context *context,

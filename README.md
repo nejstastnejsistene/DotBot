@@ -31,17 +31,18 @@ Check out [heroku-buildpack-DotBot](https://github.com/nejstastnejsistene/heroku
 ### Run benchmark
 ```
 $ ./benchmark
-1000 games of 35 turns (with shrinkers)
-=======================================
+1000 games of 35 turns (without shrinkers)
+==========================================
 
-total time:   580.633484s
-average time: 0.580633s
+total time:            943.786621s
+average time per game: 0.943787s
+average time per move: 26.965332ms
 
-mean:    345.368011
-std dev: 36.543896
-minimum: 225
-median:  346
-maximum: 458
+mean:    310.463013
+std dev: 47.516216
+minimum: 99
+median:  312
+maximum: 427
 ```
 
 ### Run server

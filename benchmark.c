@@ -16,9 +16,12 @@ int play_game(int num_turns, int allow_shrinkers) {
     fill_grid(grid, EMPTY);
 
     for (turn = num_turns; turn > 0; turn--) {
-        mask_t move = choose_move(grid, allow_shrinkers, turn);
-        score += apply_move(grid, move);
-        fill_grid(grid, GET_CYCLE_COLOR(move));
+        int no_moves;
+        do {
+            mask_t move = choose_move(grid, allow_shrinkers, turn, &no_moves);
+            score += apply_move(grid, move);
+            fill_grid(grid, GET_CYCLE_COLOR(move));
+        } while (no_moves);
     }
 
     return score;
@@ -35,7 +38,7 @@ long time_usec() {
 int main(int argc, char **argv) {
     int num_games = (argc > 1) ? atoi(argv[1]) : DEFAULT_NUM_GAMES;
     int num_turns = NUM_TURNS;
-    int allow_shrinkers = 1;
+    int allow_shrinkers = 0;
     int i, j;
 
     float mean, std_dev;
@@ -64,8 +67,9 @@ int main(int argc, char **argv) {
     }
 
     duration = (float)(time_usec() - start_time) / MICRO;
-    printf("total time:   %fs\n", duration);
-    printf("average time: %fs\n", duration / num_games);
+    printf("total time:            %fs\n", duration);
+    printf("average time per game: %fs\n", duration / num_games);
+    printf("average time per move: %fms\n", duration / num_games / num_turns * 1000);
     printf("\n");
 
     for (j = i = 1; i < num_games; j = ++i) {
