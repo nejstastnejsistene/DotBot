@@ -315,7 +315,6 @@ audio = new class
     seqLength = 2 * @dotIndex.length - 2 # Length of repeating sequence.
     seqIndex = (n - 1) % seqLength       # Index within repeating sequence.
     i = if seqIndex < @dotIndex.length then seqIndex else seqLength - seqIndex
-    console.log i, @dotIndex[i]
     @play @dots[@dotIndex[i]]
 
   # Play the sound made when a square is completed on its nth dot.
