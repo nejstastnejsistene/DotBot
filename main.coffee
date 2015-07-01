@@ -71,7 +71,7 @@ new class Demo
     # The server sends its first message without a path to indicate that
     # it's a new board. If there's no path, then create the initial dots!
     # Otherwise put it in a queue to be dealt with later.
-    if not data.path?
+    if data.newGrid
       @dots = new Dots(@root, data.grid, @update.bind this)
     else
       @queue.push data
@@ -79,7 +79,10 @@ new class Demo
   update: ->
     # If theres a new move in the queue, play it. Otherwise, try again later.
     if (data = @queue.shift())?
-      @dots.drawPath data.path, data.grid, @update.bind(this)
+      if data.path?
+        @dots.drawPath data.path, data.grid, @update.bind(this)
+      if data.shrinkRandom?
+        @dots.shrinkRandom data.shrinkRandom, data.grid, @update.bind(this)
     else
       setTimeout @update.bind(this), @pollingInterval
 
@@ -93,7 +96,7 @@ class Dots
   drawPathDelay: 100
 
   # How long a completed path is shown before the dots are cleared.
-  clearPathDelay: 500
+  clearDotsDelay: 500
 
   # Delay after the dots have been shrunk but before the dots start falling.
   dropDotsDelay: 150
@@ -158,9 +161,21 @@ class Dots
         @root.appendChild segment
       # On the last dot, pause for a while and then shrink the dots.
       else if remainingPath.length is 1
-        setTimeout @clearPath.bind(this, newGrid, next), @clearPathDelay
+        setTimeout @clearDots.bind(this, newGrid, next), @clearDotsDelay
 
     drawNextSegment path, 1
+
+  # Quietly shrink some dots. This happens when there aren't any possible moves.
+  shrinkRandom: (dots, newGrid, next) ->
+    for [r, c] in dots
+      @markDotForRemoval @getDot(r, c)
+    @clearDots newGrid, next
+
+  markDotForRemoval: (dot) ->
+    if not dot.markedForDeletion
+      dot.markedForDeletion = true
+      @toBeRemoved ?= []
+      @toBeRemoved.push dot
 
   # Mark a dot as selected. If the selected dot forms a cycle, it selects all
   # dots of that color like it does in the game. Returns whether a cycle was
@@ -169,13 +184,7 @@ class Dots
     # Detect cycles by trying to reselect an already selected dot.
     if checkForCycle and dot.markedForDeletion
       return @completeSquare dot.color()
-
-    # Keep track of which dots need to be removed later.
-    if not dot.markedForDeletion
-      dot.markedForDeletion = true
-      @toBeRemoved ?= []
-      @toBeRemoved.push dot
-
+    @markDotForRemoval dot
     # Create a nice selection animation (removing an old one if necessary).
     dot.selection.element.remove() if dot.selection?
     dot.selection = new Dot(dot.row(), dot.col(), dot.color())
@@ -242,7 +251,7 @@ class Dots
     segment
 
   # Remove a path and the dots that were affected, then fill in the new dots.
-  clearPath: (newGrid, next) ->
+  clearDots: (newGrid, next) ->
     delete @root.dataset.color if @root.dataset.color?
     # Remove all of the elements that we've indicated to be removed.
     for x in @toBeRemoved
