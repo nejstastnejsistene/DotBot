@@ -61,15 +61,7 @@ typedef uint64_t mask_t;
 #define INDEX_COL(i)                ((i) / NUM_COLS)
 #define MASK_INDEX(row, col)        (NUM_COLS * (col) + (row)) 
 
-/* The maximum number of moves is 343. Or at least I haven't thought up a scenario
- * where more than that could fit on a single board. My justification is that the most
- * moves are computed from the DFS, which makes n(n+1)/2 moves (this is understandably
- * true for get_subpaths() but also seems to be true for build_paths()... That'd be
- * something nice to prove. The DFS only runs when there aren't any cycles, and the
- * longest paths without cycles I can imagine fitting on a board is two intertwined
- * paths of length 17 and 19. 7*18/2 + 19*20/2 = 343
- */
-#define MAX_MOVES 343
+#define MAX_MOVES 5000
 
 /* Masks for 0..6 dots in a column. */
 static const column_t column_masks[] = { 0x0, 0x7, 0x3f, 0x1ff, 0xfff, 0x7fff, 0x3ffff };

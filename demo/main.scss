@@ -26,6 +26,24 @@ $light-blue: #c6ddff;
 $violet: #985db7;
 $light-violet: #cdaeda;
 
+$vendors: 'webkit';
+
+@mixin vendor-prefix($property, $value) {
+    @each $vendor in $vendors {
+        -#{$vendor}-#{$property}: #{$value};
+    }
+    #{$property}: #{$value};
+}
+
+@mixin keyframes($animation-name) {
+    @each $vendor in $vendors {
+        @content;
+    }
+    @keyframes $animation-name {
+        @content;
+    }
+}
+
 @function offset($i) {
     @return ($i + 1) / 7 * 100%;
 }
@@ -54,7 +72,7 @@ $light-violet: #cdaeda;
         height: $dot-width;
         position: absolute;
 
-        transition: top $falling-dots-duration $falling-dots-timing-function;
+        @include vendor-prefix(transition, top $falling-dots-duration $falling-dots-timing-function);
         
         @for $i from 0 through 5 {
             $offset: offset($i) - $dot-width/2;
@@ -63,16 +81,16 @@ $light-violet: #cdaeda;
         }
 
         &.falling {
-            animation: falling $falling-dots-duration $falling-dots-timing-function forwards;
+            @include vendor-prefix(animation, falling $falling-dots-duration $falling-dots-timing-function forwards);
         }
 
         &.selecting {
-            animation: selecting $selecting-duration linear forwards;
+            @include vendor-prefix(animation, selecting $selecting-duration linear forwards);
             z-index: -2;
         }
 
         &.shrinking {
-            animation: shrinking $shrinking-duration linear forwards;
+            @include vendor-prefix(animation, shrinking $shrinking-duration linear forwards);
             z-index: -1;
         }
     }
@@ -80,9 +98,9 @@ $light-violet: #cdaeda;
     .path-segment {
         position: absolute;
 
-        animation-duration: $path-segment-duration;
-        animation-timing-function: linear;
-        animation-fill-mode: forwards;
+        @include vendor-prefix(animation-duration, $path-segment-duration);
+        @include vendor-prefix(animation-timing-function, linear);
+        @include vendor-prefix(animation-fill-mode, forwards);
 
         @for $r from 0 through 5 {
             @for $c from 0 through 5 {
@@ -100,14 +118,14 @@ $light-violet: #cdaeda;
                         left:   $left;
                         top:    $top;
                         right:  $near-right;
-                        animation-name: from-#{$r}-#{$c}-to-#{$r+1}-#{$c}
+                        @include vendor-prefix(animation-name, from-#{$r}-#{$c}-to-#{$r+1}-#{$c});
                     }
                     // bottom to top
                     &.from-#{$r+1}-#{$c}-to-#{$r}-#{$c} {
                         left:   $left;
                         right:  $near-right;
                         bottom: $far-bottom;
-                        animation-name: from-#{$r+1}-#{$c}-to-#{$r}-#{$c}
+                        @include vendor-prefix(animation-name, from-#{$r+1}-#{$c}-to-#{$r}-#{$c});
                     }
                 }
                 // Horizontally, between c and c+1
@@ -117,14 +135,14 @@ $light-violet: #cdaeda;
                         left:   $left;
                         top:    $top;
                         bottom: $near-bottom;
-                        animation-name: from-#{$r}-#{$c}-to-#{$r}-#{$c+1}
+                        @include vendor-prefix(animation-name, from-#{$r}-#{$c}-to-#{$r}-#{$c+1});
                     }
                     // right to left
                     &.from-#{$r}-#{$c+1}-to-#{$r}-#{$c} {
                         top:    $top;
                         right:  $far-right;
                         bottom: $near-bottom;
-                        animation-name: from-#{$r}-#{$c+1}-to-#{$r}-#{$c}
+                        @include vendor-prefix(animation-name, from-#{$r}-#{$c+1}-to-#{$r}-#{$c});
                     }
                 }
             }
@@ -132,20 +150,20 @@ $light-violet: #cdaeda;
     }
 }
 
-@keyframes falling {
+@include keyframes(falling) {
     from {
         top: 0;
     }
 }
 
-@keyframes selecting {
+@include keyframes(selecting) {
     to {
         transform: scale($selecting-scale-factor);
         opacity: 0;
     }
 }
 
-@keyframes shrinking {
+@include keyframes(shrinking) {
     to { transform: scale(0) }
 }
 
@@ -156,21 +174,21 @@ $light-violet: #cdaeda;
         $right:   offset($c+1) - $path-width/2;
         $bottom:  offset($r+1) - $path-width/2;
         @if $r < 5 {
-            @keyframes from-#{$r}-#{$c}-to-#{$r+1}-#{$c} {
+            @-webkit-keyframes from-#{$r}-#{$c}-to-#{$r+1}-#{$c} {
                 from { bottom: 100% - $top }
                 to   { bottom: 100% - $bottom }
             }
-            @keyframes from-#{$r+1}-#{$c}-to-#{$r}-#{$c} {
+            @-webkit-keyframes from-#{$r+1}-#{$c}-to-#{$r}-#{$c} {
                 from { top: $bottom }
                 to   { top: $top }
             }
         }
         @if $c < 5 {
-            @keyframes from-#{$r}-#{$c}-to-#{$r}-#{$c+1} {
+            @-webkit-keyframes from-#{$r}-#{$c}-to-#{$r}-#{$c+1} {
                 from { right: 100% - $left }
                 to   { right: 100% - $right }
             }
-            @keyframes from-#{$r}-#{$c+1}-to-#{$r}-#{$c} {
+            @-webkit-keyframes from-#{$r}-#{$c+1}-to-#{$r}-#{$c} {
                 from { left: $right }
                 to   { left: $left }
             }
