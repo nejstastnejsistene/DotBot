@@ -72,7 +72,9 @@ new class Demo
     # it's a new board. If there's no path, then create the initial dots!
     # Otherwise put it in a queue to be dealt with later.
     if data.newGrid
-      @dots = new Dots(@root, data.grid, @update.bind this)
+      root = @root.getElementsByClassName('grid')[0]
+      border = new Border(@root.getElementsByClassName 'border')
+      @dots = new Dots(root, border, data.grid, @update.bind this)
     else
       @queue.push data
 
@@ -85,6 +87,26 @@ new class Demo
         @dots.shrinkRandom data.shrinkRandom, data.grid, @update.bind(this)
     else
       setTimeout @update.bind(this), @pollingInterval
+
+
+class Border
+
+  @maxBorder: 14
+
+  constructor: ([top, bottom]) -> @borders = [top, bottom]
+
+  # Resets/hides the border.
+  reset: -> border.dataset.numDots = 0 for border in @borders
+
+  # Completes the border, for when a square is completed.
+  square: -> border.dataset.numDots = 'all' for border in @borders
+
+  # Increases the size of the border by one step.
+  expand: (color) ->
+    for border in @borders
+      border.dataset.color = color
+      n = Number border.dataset.numDots
+      border.dataset.numDots = if n < Border.maxBorder then n + 1 else 'all'
 
 
 class Dots
@@ -103,7 +125,7 @@ class Dots
 
   # Create a dots board in a root element. Calling this calls the dots of
   # the given grid to fall into place.
-  constructor: (@root, @grid, next) ->
+  constructor: (@root, @border, @grid, next) ->
     @dots = ([] for r in [0..5])
     @dropDots @grid, next
 
@@ -142,10 +164,14 @@ class Dots
 
   # Draw a path through the dots.
   drawPath: (@path, newGrid, next) ->
+    @border.reset()
     # Recursively draw each path segment.
     drawNextSegment = (remainingPath, n, cycleCompleted = false) =>
-      if @selectDot @getDot(remainingPath[0]...), not cycleCompleted
+      dot = @getDot(remainingPath[0]...)
+      @border.expand dot.color()
+      if @selectDot dot, not cycleCompleted
         cycleCompleted = true
+        @border.square()
         audio.playDot n
         audio.playSquare n
       else if path.length is 1
@@ -253,6 +279,7 @@ class Dots
 
   # Remove a path and the dots that were affected, then fill in the new dots.
   clearDots: (newGrid, next) ->
+    @border.reset()
     delete @root.dataset.color if @root.dataset.color?
     # Remove all of the elements that we've indicated to be removed.
     for x in @toBeRemoved
